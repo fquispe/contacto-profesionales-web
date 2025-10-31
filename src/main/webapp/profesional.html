@@ -1,0 +1,1105 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil Profesional - ServiciosPro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #667eea;
+            --primary-dark: #5a6fd8;
+            --secondary-color: #764ba2;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-gray: #f8f9fa;
+            --medium-gray: #6c757d;
+            --dark-gray: #343a40;
+            --border-color: #e9ecef;
+            --shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: var(--light-gray);
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header con portada */
+        .profile-header {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+            margin-bottom: 20px;
+        }
+
+        .cover-photo {
+            height: 300px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .cover-photo img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .cover-placeholder {
+            color: white;
+            font-size: 80px;
+            opacity: 0.3;
+        }
+
+        .profile-info {
+            padding: 0 40px 40px;
+            position: relative;
+        }
+
+        .profile-avatar {
+            width: 150px;
+            height: 150px;
+            border-radius: 50%;
+            border: 5px solid white;
+            background: white;
+            position: absolute;
+            top: -75px;
+            left: 40px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        .profile-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .profile-avatar-placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            font-size: 60px;
+        }
+
+        .profile-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 15px;
+            padding-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .profile-main-info {
+            margin-top: 90px;
+        }
+
+        .profile-name {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--dark-gray);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .verified-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: var(--success-color);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .profile-specialty {
+            font-size: 20px;
+            color: var(--medium-gray);
+            margin-bottom: 15px;
+        }
+
+        .profile-stats {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--medium-gray);
+            font-size: 15px;
+        }
+
+        .stat-icon {
+            font-size: 20px;
+        }
+
+        .rating {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: var(--warning-color);
+            font-weight: 600;
+        }
+
+        /* Grid Layout */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: var(--shadow);
+        }
+
+        .card-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--dark-gray);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title-icon {
+            font-size: 24px;
+        }
+
+        /* Descripción */
+        .description-text {
+            color: var(--dark-gray);
+            line-height: 1.8;
+            font-size: 15px;
+        }
+
+        /* Habilidades */
+        .skills-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .skill-badge {
+            padding: 8px 16px;
+            background: var(--light-gray);
+            border-radius: 20px;
+            font-size: 14px;
+            color: var(--dark-gray);
+            font-weight: 500;
+        }
+
+        /* Portafolio */
+        .portfolio-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .portfolio-item {
+            aspect-ratio: 1;
+            border-radius: 10px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+
+        .portfolio-item:hover {
+            transform: scale(1.05);
+        }
+
+        .portfolio-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .portfolio-placeholder {
+            width: 100%;
+            height: 100%;
+            background: var(--light-gray);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: var(--medium-gray);
+        }
+
+        /* Reseñas */
+        .reviews-list {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .review-item {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        .review-item:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .review-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .reviewer-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .reviewer-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .reviewer-name {
+            font-weight: 600;
+            color: var(--dark-gray);
+        }
+
+        .review-date {
+            font-size: 13px;
+            color: var(--medium-gray);
+        }
+
+        .review-rating {
+            display: flex;
+            gap: 2px;
+            color: var(--warning-color);
+        }
+
+        .review-text {
+            color: var(--medium-gray);
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        /* Sidebar Cards */
+        .info-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .info-icon {
+            font-size: 20px;
+            color: var(--primary-color);
+            min-width: 24px;
+        }
+
+        .info-content {
+            flex: 1;
+        }
+
+        .info-label {
+            font-size: 13px;
+            color: var(--medium-gray);
+            margin-bottom: 3px;
+        }
+
+        .info-value {
+            color: var(--dark-gray);
+            font-weight: 500;
+        }
+
+        .price-display {
+            background: var(--light-gray);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .price-label {
+            font-size: 14px;
+            color: var(--medium-gray);
+            margin-bottom: 8px;
+        }
+
+        .price-amount {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+
+        .price-unit {
+            font-size: 16px;
+            color: var(--medium-gray);
+        }
+
+        /* Loading */
+        .loading {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 400px;
+            gap: 20px;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--border-color);
+            border-top: 4px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Alert */
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .alert-error {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--error-color);
+            border: 2px solid rgba(220, 53, 69, 0.2);
+        }
+
+        .alert-info {
+            background: rgba(23, 162, 184, 0.1);
+            color: var(--info-color);
+            border: 2px solid rgba(23, 162, 184, 0.2);
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                order: -1;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .cover-photo {
+                height: 200px;
+            }
+            
+            .profile-info {
+                padding: 0 20px 20px;
+            }
+            
+            .profile-avatar {
+                width: 100px;
+                height: 100px;
+                top: -50px;
+                left: 20px;
+            }
+            
+            .profile-main-info {
+                margin-top: 60px;
+            }
+            
+            .profile-name {
+                font-size: 24px;
+            }
+            
+            .profile-actions {
+                flex-direction: column;
+            }
+            
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .portfolio-grid {
+                grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="alertContainer"></div>
+    
+    <div class="container">
+        <div id="loadingContainer" class="loading">
+            <div class="spinner"></div>
+            <p>Cargando perfil del profesional...</p>
+        </div>
+
+        <div id="profileContainer" style="display: none;">
+            <!-- Profile Header -->
+            <div class="profile-header">
+                <div class="cover-photo" id="coverPhoto">
+                    <div class="cover-placeholder">🔧</div>
+                </div>
+                
+                <div class="profile-info">
+                    <div class="profile-avatar" id="profileAvatar">
+                        <div class="profile-avatar-placeholder">👨‍🔧</div>
+                    </div>
+                    
+                    <div class="profile-actions">
+                        <button class="btn btn-secondary" onclick="compartirPerfil()">
+                            📤 Compartir
+                        </button>
+                        <button class="btn btn-primary" onclick="solicitarServicio()">
+                            📋 Solicitar Servicio
+                        </button>
+                    </div>
+                    
+                    <div class="profile-main-info">
+                        <h1 class="profile-name">
+                            <span id="professionalName">Cargando...</span>
+                            <span class="verified-badge" id="verifiedBadge" style="display: none;">
+                                ✓ Verificado
+                            </span>
+                        </h1>
+                        <p class="profile-specialty" id="professionalSpecialty">-</p>
+                        
+                        <div class="profile-stats">
+                            <div class="stat-item">
+                                <span class="stat-icon">⭐</span>
+                                <span class="rating">
+                                    <span id="rating">0.0</span>
+                                    (<span id="totalReviews">0</span> reseñas)
+                                </span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-icon">📍</span>
+                                <span id="location">-</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-icon">📅</span>
+                                <span id="availability">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Content Grid -->
+            <div class="content-grid">
+                <!-- Main Content -->
+                <div class="main-content">
+                    <!-- Descripción -->
+                    <div class="card">
+                        <h2 class="card-title">
+                            <span class="card-title-icon">📝</span>
+                            Sobre mí
+                        </h2>
+                        <p class="description-text" id="description">
+                            Cargando descripción...
+                        </p>
+                    </div>
+
+                    <!-- Habilidades -->
+                    <div class="card">
+                        <h2 class="card-title">
+                            <span class="card-title-icon">⚡</span>
+                            Habilidades
+                        </h2>
+                        <div class="skills-list" id="skillsList">
+                            <div class="skill-badge">Cargando...</div>
+                        </div>
+                    </div>
+
+                    <!-- Portafolio -->
+                    <div class="card">
+                        <h2 class="card-title">
+                            <span class="card-title-icon">🖼️</span>
+                            Portafolio
+                        </h2>
+                        <div class="portfolio-grid" id="portfolioGrid">
+                            <div class="portfolio-item">
+                                <div class="portfolio-placeholder">📷</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Reseñas -->
+                    <div class="card">
+                        <h2 class="card-title">
+                            <span class="card-title-icon">💬</span>
+                            Reseñas
+                        </h2>
+                        <div class="reviews-list" id="reviewsList">
+                            <p>Cargando reseñas...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Sidebar -->
+                <div class="sidebar">
+                    <!-- Precio -->
+                    <div class="card">
+                        <div class="price-display">
+                            <div class="price-label">Tarifa por hora</div>
+                            <div>
+                                <span class="price-amount" id="priceAmount">S/ 0</span>
+                                <span class="price-unit">/hora</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Información de Contacto -->
+                    <div class="card">
+                        <h3 class="card-title">
+                            <span class="card-title-icon">📞</span>
+                            Información
+                        </h3>
+                        <div class="info-list">
+                            <div class="info-item">
+                                <span class="info-icon">📧</span>
+                                <div class="info-content">
+                                    <div class="info-label">Email</div>
+                                    <div class="info-value" id="email">-</div>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-icon">📱</span>
+                                <div class="info-content">
+                                    <div class="info-label">Teléfono</div>
+                                    <div class="info-value" id="phone">-</div>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-icon">📍</span>
+                                <div class="info-content">
+                                    <div class="info-label">Distrito</div>
+                                    <div class="info-value" id="district">-</div>
+                                </div>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-icon">🎓</span>
+                                <div class="info-content">
+                                    <div class="info-label">Experiencia</div>
+                                    <div class="info-value" id="experience">-</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Certificaciones -->
+                    <div class="card">
+                        <h3 class="card-title">
+                            <span class="card-title-icon">🏆</span>
+                            Certificaciones
+                        </h3>
+                        <div id="certificationsList">
+                            <p>Cargando...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+	    // ============================================
+	    // SERVICIO DE API
+	    // ============================================
+	    class ProfesionalService {
+	        constructor() {
+	            this.baseURL = '/ContactoProfesionalesWeb/api';
+	        }
+	
+	        async obtenerProfesional(id) {
+	            try {
+	                const response = await fetch(`${this.baseURL}/profesionales/${id}`);
+	                const data = await response.json();
+	
+	                if (response.ok && data.success) {
+	                    return { success: true, data: data.data.profesional };
+	                } else {
+	                    return { success: false, message: data.error || 'Error al cargar profesional' };
+	                }
+	            } catch (error) {
+	                console.error('Error al obtener profesional:', error);
+	                return { success: false, message: 'Error de conexión con el servidor' };
+	            }
+	        }
+	
+	        async obtenerProfesionalPorUsuario(usuarioId) {
+	            try {
+	                const response = await fetch(`${this.baseURL}/profesionales?usuarioId=${usuarioId}`);
+	                const data = await response.json();
+	
+	                if (response.ok && data.success) {
+	                    return { success: true, data: data.data.profesional };
+	                } else {
+	                    return { success: false, message: data.error || 'Profesional no encontrado' };
+	                }
+	            } catch (error) {
+	                console.error('Error al obtener profesional por usuario:', error);
+	                return { success: false, message: 'Error de conexión con el servidor' };
+	            }
+	        }
+	    }
+	
+	    const profesionalService = new ProfesionalService();
+	
+	    // ============================================
+	    // VARIABLES GLOBALES
+	    // ============================================
+	    let profesionalId = null;
+	    let usuarioId = null;
+	    let profesionalData = null;
+	    let modoRegistro = false; // Nuevo: indica si estamos registrando o viendo
+	
+	    // ============================================
+	    // INICIALIZACIÓN
+	    // ============================================
+	    document.addEventListener('DOMContentLoaded', async function() {
+	        const urlParams = new URLSearchParams(window.location.search);
+	        profesionalId = urlParams.get('id');
+	        usuarioId = urlParams.get('usuarioId');
+	
+	        console.log('Parámetros URL:', { profesionalId, usuarioId });
+	
+	        // CASO 1: Ver perfil de profesional existente (viene con ?id=123)
+	        if (profesionalId) {
+	            console.log('Modo: Ver perfil existente');
+	            modoRegistro = false;
+	            await cargarProfesional(profesionalId);
+	            return;
+	        }
+	
+	        // CASO 2: Registrar/editar perfil propio (viene con ?usuarioId=456)
+	        if (usuarioId) {
+	            console.log('Modo: Registro/Edición de perfil propio');
+	            modoRegistro = true;
+	            
+	            // Verificar si ya existe un perfil profesional para este usuario
+	            const result = await profesionalService.obtenerProfesionalPorUsuario(usuarioId);
+	            
+	            if (result.success && result.data) {
+	                // Ya tiene perfil, cargar para editar
+	                console.log('Usuario ya tiene perfil profesional');
+	                profesionalData = result.data;
+	                renderizarPerfil(profesionalData);
+	                habilitarModoEdicion();
+	            } else {
+	                // No tiene perfil, mostrar formulario de registro
+	                console.log('Usuario nuevo, mostrar formulario de registro');
+	                mostrarFormularioRegistro();
+	            }
+	            
+	            document.getElementById('loadingContainer').style.display = 'none';
+	            document.getElementById('profileContainer').style.display = 'block';
+	            return;
+	        }
+	
+	        // CASO 3: No hay parámetros (ERROR)
+	        console.error('No se proporcionó ni id ni usuarioId');
+	        showAlert('Acceso inválido a esta página', 'error');
+	        setTimeout(() => {
+	            window.location.href = '/ContactoProfesionalesWeb/dashboard.html';
+	        }, 2000);
+	    });
+	
+	    // ============================================
+	    // CARGAR DATOS DEL PROFESIONAL (modo visualización)
+	    // ============================================
+	    async function cargarProfesional(id) {
+	        try {
+	            const result = await profesionalService.obtenerProfesional(id);
+	
+	            if (result.success) {
+	                profesionalData = result.data;
+	                renderizarPerfil(profesionalData);
+	                document.getElementById('loadingContainer').style.display = 'none';
+	                document.getElementById('profileContainer').style.display = 'block';
+	            } else {
+	                showAlert(result.message, 'error');
+	                setTimeout(() => {
+	                    window.location.href = '/ContactoProfesionalesWeb/buscar-profesional.html';
+	                }, 2000);
+	            }
+	        } catch (error) {
+	            console.error('Error al cargar profesional:', error);
+	            showAlert('Error al cargar el perfil', 'error');
+	        }
+	    }
+	
+	    // ============================================
+	    // MOSTRAR FORMULARIO DE REGISTRO
+	    // ============================================
+	    function mostrarFormularioRegistro() {
+	        // Obtener datos del usuario logueado
+	        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+	        
+	        // Pre-llenar campos básicos
+	        document.getElementById('professionalName').textContent = 
+	            userData.nombre || 'Complete su perfil';
+	        document.getElementById('professionalSpecialty').textContent = 
+	            'Seleccione su especialidad';
+	        
+	        // Ocultar secciones no relevantes para registro
+	        document.getElementById('rating').textContent = '0.0';
+	        document.getElementById('totalReviews').textContent = '0';
+	        document.getElementById('location').textContent = userData.distrito || '-';
+	        document.getElementById('availability').textContent = 'Por definir';
+	        
+	        document.getElementById('description').textContent = 
+	            'Complete su descripción profesional...';
+	        
+	        document.getElementById('skillsList').innerHTML = 
+	            '<p style="color: var(--medium-gray);">Agregue sus habilidades</p>';
+	        
+	        document.getElementById('portfolioGrid').innerHTML = 
+	            '<p style="color: var(--medium-gray);">Agregue trabajos a su portafolio</p>';
+	        
+	        document.getElementById('reviewsList').innerHTML = 
+	            '<p style="color: var(--medium-gray);">Aún no tiene reseñas</p>';
+	        
+	        // Información de contacto
+	        document.getElementById('email').textContent = userData.email || '-';
+	        document.getElementById('phone').textContent = userData.telefono || '-';
+	        document.getElementById('district').textContent = userData.distrito || '-';
+	        document.getElementById('experience').textContent = 'Por definir';
+	        
+	        document.getElementById('priceAmount').textContent = 'S/ 0.00';
+	        
+	        document.getElementById('certificationsList').innerHTML = 
+	            '<p style="color: var(--medium-gray);">Agregue sus certificaciones</p>';
+	        
+	        // Cambiar botones de acción
+	        const actionsContainer = document.querySelector('.profile-actions');
+	        actionsContainer.innerHTML = `
+	            <button class="btn btn-primary" onclick="guardarPerfil()">
+	                💾 Guardar Perfil
+	            </button>
+	            <button class="btn btn-secondary" onclick="volverDashboard()">
+	                ← Volver
+	            </button>
+	        `;
+	    }
+	
+	    // ============================================
+	    // HABILITAR MODO EDICIÓN
+	    // ============================================
+	    function habilitarModoEdicion() {
+	        // Cambiar botones de acción para permitir editar
+	        const actionsContainer = document.querySelector('.profile-actions');
+	        actionsContainer.innerHTML = `
+	            <button class="btn btn-primary" onclick="editarPerfil()">
+	                ✏️ Editar Perfil
+	            </button>
+	            <button class="btn btn-secondary" onclick="volverDashboard()">
+	                ← Volver al Dashboard
+	            </button>
+	        `;
+	    }
+	
+	    // ============================================
+	    // RENDERIZAR PERFIL (sin cambios, mantener tu código actual)
+	    // ============================================
+	    function renderizarPerfil(data) {
+	        // Tu código actual de renderizarPerfil aquí...
+	        // (El que ya tienes en el documento, líneas 580-710)
+	        
+	        // Nombre y especialidad
+	        document.getElementById('professionalName').textContent = data.nombreCompleto;
+	        document.getElementById('professionalSpecialty').textContent = data.especialidad;
+	
+	        // Badge de verificado
+	        if (data.verificado) {
+	            document.getElementById('verifiedBadge').style.display = 'inline-flex';
+	        }
+	
+	        // Calificación
+	        document.getElementById('rating').textContent = data.calificacionPromedio.toFixed(1);
+	        document.getElementById('totalReviews').textContent = data.totalResenas;
+	
+	        // Ubicación
+	        document.getElementById('location').textContent = 
+	            `${data.distrito}, ${data.ubicacion || 'Lima'}`;
+	
+	        // Disponibilidad
+	        document.getElementById('availability').textContent = 
+	            data.disponibilidad || 'Consultar disponibilidad';
+	
+	        // Descripción
+	        document.getElementById('description').textContent = 
+	            data.descripcion || 'Sin descripción disponible';
+	
+	        // Habilidades
+	        if (data.habilidades && data.habilidades.length > 0) {
+	            document.getElementById('skillsList').innerHTML = data.habilidades
+	                .map(skill => `<div class="skill-badge">${skill}</div>`)
+	                .join('');
+	        } else {
+	            document.getElementById('skillsList').innerHTML = 
+	                '<p style="color: var(--medium-gray);">Sin habilidades registradas</p>';
+	        }
+	
+	        // Portafolio
+	        if (data.portafolio && data.portafolio.length > 0) {
+	            document.getElementById('portfolioGrid').innerHTML = data.portafolio
+	                .map(url => `
+	                    <div class="portfolio-item" onclick="verImagen('${url}')">
+	                        <img src="${url}" alt="Trabajo realizado">
+	                    </div>
+	                `).join('');
+	        } else {
+	            document.getElementById('portfolioGrid').innerHTML = `
+	                <div class="portfolio-item">
+	                    <div class="portfolio-placeholder">📷</div>
+	                </div>
+	                <p style="grid-column: 1/-1; text-align: center; color: var(--medium-gray);">
+	                    Sin trabajos en portafolio
+	                </p>
+	            `;
+	        }
+	
+	        // Precio
+	        document.getElementById('priceAmount').textContent = 
+	            `S/ ${data.tarifaHora ? data.tarifaHora.toFixed(2) : '0.00'}`;
+	
+	        // Información de contacto
+	        document.getElementById('email').textContent = data.email;
+	        document.getElementById('phone').textContent = data.telefono;
+	        document.getElementById('district').textContent = data.distrito;
+	        document.getElementById('experience').textContent = 
+	            data.experiencia || 'No especificado';
+	
+	        // Certificaciones
+	        if (data.certificaciones && data.certificaciones.length > 0) {
+	            document.getElementById('certificationsList').innerHTML = `
+	                <ul style="list-style: none; padding: 0;">
+	                    ${data.certificaciones.map(cert => `
+	                        <li style="padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+	                            ✓ ${cert}
+	                        </li>
+	                    `).join('')}
+	                </ul>
+	            `;
+	        } else {
+	            document.getElementById('certificationsList').innerHTML = 
+	                '<p style="color: var(--medium-gray);">Sin certificaciones registradas</p>';
+	        }
+	
+	        // Fotos
+	        if (data.fotoPerfil) {
+	            document.getElementById('profileAvatar').innerHTML = 
+	                `<img src="${data.fotoPerfil}" alt="${data.nombreCompleto}">`;
+	        }
+	
+	        if (data.fotoPortada) {
+	            document.getElementById('coverPhoto').innerHTML = 
+	                `<img src="${data.fotoPortada}" alt="Portada">`;
+	        }
+	
+	        // Cargar reseñas
+	        cargarResenas(data.id);
+	    }
+	
+	    // ============================================
+	    // CARGAR RESEÑAS (sin cambios)
+	    // ============================================
+	    function cargarResenas(profesionalId) {
+	        // Tu código actual aquí (líneas 715-760)
+	        const resenas = [
+	            {
+	                nombre: 'María García',
+	                fecha: '15/11/2024',
+	                calificacion: 5,
+	                comentario: 'Excelente servicio, muy profesional y puntual.'
+	            }
+	        ];
+	
+	        if (resenas.length > 0) {
+	            document.getElementById('reviewsList').innerHTML = resenas.map(resena => `
+	                <div class="review-item">
+	                    <div class="review-header">
+	                        <div class="reviewer-info">
+	                            <div class="reviewer-avatar">${resena.nombre.charAt(0)}</div>
+	                            <div>
+	                                <div class="reviewer-name">${resena.nombre}</div>
+	                                <div class="review-date">${resena.fecha}</div>
+	                            </div>
+	                        </div>
+	                        <div class="review-rating">
+	                            ${'⭐'.repeat(resena.calificacion)}
+	                        </div>
+	                    </div>
+	                    <p class="review-text">${resena.comentario}</p>
+	                </div>
+	            `).join('');
+	        }
+	    }
+	
+	    // ============================================
+	    // NUEVAS FUNCIONES
+	    // ============================================
+	    
+	    function guardarPerfil() {
+	        // TODO: Implementar guardado de nuevo perfil
+	        showAlert('Función de guardado en desarrollo', 'info');
+	        // Aquí harías un POST a /api/profesionales con los datos del formulario
+	    }
+	
+	    function editarPerfil() {
+	        // TODO: Implementar edición de perfil
+	        showAlert('Función de edición en desarrollo', 'info');
+	        // Aquí harías un PUT a /api/profesionales/{id} con los datos actualizados
+	    }
+	
+	    function volverDashboard() {
+	        window.location.href = '/ContactoProfesionalesWeb/dashboard.html';
+	    }
+	
+	    // ============================================
+	    // ACCIONES ORIGINALES
+	    // ============================================
+	    function solicitarServicio() {
+	        if (!profesionalId) return;
+	        window.location.href = `/ContactoProfesionalesWeb/servicio.html?profesionalId=${profesionalId}`;
+	    }
+	
+	    function compartirPerfil() {
+	        const url = window.location.href;
+	        if (navigator.share) {
+	            navigator.share({
+	                title: `Perfil de ${profesionalData.nombreCompleto}`,
+	                text: `${profesionalData.especialidad} - ${profesionalData.distrito}`,
+	                url: url
+	            }).catch(err => console.log('Error al compartir:', err));
+	        } else {
+	            navigator.clipboard.writeText(url).then(() => {
+	                showAlert('✓ Enlace copiado al portapapeles', 'info');
+	            });
+	        }
+	    }
+	
+	    function verImagen(url) {
+	        window.open(url, '_blank');
+	    }
+	
+	    // ============================================
+	    // ALERTAS
+	    // ============================================
+	    function showAlert(message, type) {
+	        const container = document.getElementById('alertContainer');
+	        const alert = document.createElement('div');
+	        alert.className = `alert alert-${type}`;
+	        alert.textContent = message;
+	        alert.style.display = 'block';
+	        
+	        container.innerHTML = '';
+	        container.appendChild(alert);
+	        
+	        setTimeout(() => {
+	            alert.style.display = 'none';
+	        }, 5000);
+	    }
+	</script>
+</body>
+</html>
