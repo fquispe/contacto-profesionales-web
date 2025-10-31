@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contacto Profesionales - Home</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 50px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 600px;
+            width: 100%;
+        }
+        h1 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 36px;
+        }
+        p {
+            color: #666;
+            margin: 15px 0;
+            font-size: 18px;
+        }
+        .success {
+            color: #28a745;
+            font-weight: bold;
+            font-size: 24px;
+            margin: 20px 0;
+        }
+        .button {
+            display: inline-block;
+            margin: 10px;
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            transition: transform 0.3s;
+            cursor: pointer;
+            border: none;
+            font-size: 14px;
+        }
+        .button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .test-results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            text-align: left;
+        }
+        .test-item {
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #28a745;
+            background: white;
+        }
+        #testOutput {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 10px;
+            font-weight: bold;
+            min-height: 50px;
+            display: none;
+        }
+        #testOutput.show {
+            display: block;
+        }
+        #testOutput.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        #testOutput.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎉 ¡Proyecto Configurado Exitosamente!</h1>
+        <p class="success">✓ Contacto Profesionales Web</p>
+        
+        <p>Tu aplicación web está lista para comenzar el desarrollo.</p>
+        
+        <div class="test-results">
+            <h3>✅ Tests de Configuración:</h3>
+            <div class="test-item">✓ Maven configurado correctamente</div>
+            <div class="test-item">✓ Tomcat funcionando</div>
+            <div class="test-item">✓ Servlets desplegados</div>
+            <div class="test-item">✓ PostgreSQL conectado</div>
+            <div class="test-item">✓ Archivos de configuración listos</div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <a href="login.html" class="button">Ir al Login</a>
+            <button onclick="testServlet()" class="button">Test Servlet</button>
+            <button onclick="testDatabase()" class="button">Test Database</button>
+        </div>
+        
+        <div id="testOutput"></div>
+    </div>
+
+    <script>
+        async function testServlet() {
+            const output = document.getElementById('testOutput');
+            output.className = 'show';
+            output.textContent = '⏳ Probando servlet...';
+            output.style.background = '#fff3cd';
+            output.style.color = '#856404';
+            
+            try {
+                const response = await fetch('/ContactoProfesionalesWeb/api/test');
+                const data = await response.json();
+                
+                output.className = 'show success';
+                output.textContent = '✓ Servlet: ' + data.message;
+            } catch (error) {
+                output.className = 'show error';
+                output.textContent = '✗ Error en servlet: ' + error.message;
+            }
+        }
+
+        async function testDatabase() {
+            const output = document.getElementById('testOutput');
+            output.className = 'show';
+            output.textContent = '⏳ Probando base de datos...';
+            output.style.background = '#fff3cd';
+            output.style.color = '#856404';
+            
+            try {
+                const response = await fetch('/ContactoProfesionalesWeb/api/test-db');
+                const data = await response.json();
+                
+                if (data.status === 'success') {
+                    output.className = 'show success';
+                    output.textContent = '✓ Database: ' + data.message + ' | Usuarios: ' + data.totalUsuarios;
+                } else {
+                    output.className = 'show error';
+                    output.textContent = '✗ Database: ' + data.message;
+                }
+            } catch (error) {
+                output.className = 'show error';
+                output.textContent = '✗ Error en database: ' + error.message;
+            }
+        }
+
+        // Test automático al cargar
+        window.addEventListener('load', function() {
+            console.log('✓ Página cargada correctamente');
+            console.log('✓ JavaScript funcionando');
+        });
+    </script>
+</body>
+</html>

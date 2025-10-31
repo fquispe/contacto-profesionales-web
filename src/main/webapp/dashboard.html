@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - ServiciosPro</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --primary-color: #667eea;
+      --secondary-color: #764ba2;
+      --light-gray: #f8f9fa;
+      --medium-gray: #6c757d;
+      --dark-gray: #343a40;
+      --border-color: #e9ecef;
+      --shadow: 0 10px 30px rgba(0,0,0,0.1);
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      display: flex;
+      background: var(--light-gray);
+      margin: 0;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* Sidebar */
+    .sidebar {
+      width: 250px;
+      background: linear-gradient(180deg, var(--primary-color), var(--secondary-color));
+      color: white;
+      display: flex;
+      flex-direction: column;
+      padding: 25px 20px;
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+    }
+
+    .logo {
+      font-size: 26px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 40px;
+      letter-spacing: -1px;
+    }
+
+    .menu {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .menu-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 15px;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .menu-item:hover, .menu-item.active {
+      background: rgba(255,255,255,0.15);
+      transform: translateX(4px);
+    }
+
+    .menu-item span {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    /* Header */
+    .header {
+      background: white;
+      padding: 15px 25px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .header h2 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--dark-gray);
+    }
+
+    .logout-btn {
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: var(--transition);
+    }
+
+    .logout-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+    }
+
+    /* Main content */
+    .main-content {
+      flex: 1;
+      padding: 30px;
+      background: #fff;
+      border-radius: 16px 0 0 16px;
+      margin: 20px;
+      box-shadow: var(--shadow);
+      animation: fadeIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .card {
+      background: white;
+      border-radius: 12px;
+      padding: 25px;
+      margin-bottom: 20px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+      transition: var(--transition);
+    }
+
+    .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(102,126,234,0.15);
+    }
+
+    .card h3 {
+      color: var(--dark-gray);
+      font-size: 18px;
+      margin-bottom: 10px;
+    }
+
+    .card p {
+      color: var(--medium-gray);
+      font-size: 15px;
+      line-height: 1.6;
+    }
+
+    /* Responsive */
+    @media (max-width: 800px) {
+      .sidebar {
+        width: 200px;
+      }
+      .main-content {
+        padding: 20px;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .sidebar {
+        display: none;
+      }
+      .header {
+        justify-content: center;
+      }
+      .main-content {
+        margin: 0;
+        border-radius: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="logo">ServiciosProfesionales</div>
+    <nav class="menu">
+      <div class="menu-item active" onclick="showSection('home')">🏠 <span>Inicio</span></div>
+      <div class="menu-item" onclick="showSection('personal')">👤 <span>Actualizar Información</span></div>
+      <div class="menu-item" onclick="goToService()">📝 <span>Solitud de Servicio</span></div>
+      <div class="menu-item" onclick="showSection('stats')">📊 <span>Estadísticas</span></div>
+    </nav>
+  </aside>
+
+  <!-- Main area -->
+  <div style="flex:1; display:flex; flex-direction:column;">
+    <header class="header">
+      <h2 id="welcomeTitle">Bienvenido(a)</h2>
+      <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+    </header>
+
+    <main class="main-content" id="contentArea">
+      <!-- Inicio -->
+      <div id="home" class="card">
+        <h3>Panel Principal</h3>
+        <p>Desde aquí puedes gestionar tus solicitudes, ver tus servicios activos y mantener actualizada tu información personal.</p>
+      </div>
+
+      <!-- Información personal -->
+      <div id="personal" class="card" style="display:none;">
+        <h3>Actualizar Información Personal</h3>
+        <form id="updateForm">
+          <label>Nombre:</label><br>
+          <input type="text" id="name" class="form-input" style="width:100%;padding:10px;margin:10px 0;"><br>
+          <label>Correo:</label><br>
+          <input type="email" id="email" class="form-input" style="width:100%;padding:10px;margin:10px 0;"><br>
+          <button type="submit" class="logout-btn">Actualizar</button>
+        </form>
+      </div>
+
+      <!-- Petición de servicio -->
+      <div id="service" class="card" style="display:none;">
+        <h3>Registrar Petición de Servicio</h3>
+        <form id="serviceForm">
+          <label>Tipo de Servicio:</label><br>
+          <input type="text" id="serviceType" class="form-input" style="width:100%;padding:10px;margin:10px 0;"><br>
+          <label>Descripción:</label><br>
+          <textarea id="serviceDescription" class="form-input" style="width:100%;height:100px;padding:10px;margin:10px 0;"></textarea><br>
+          <button type="submit" class="logout-btn">Registrar</button>
+        </form>
+      </div>
+
+      <!-- Estadísticas -->
+      <div id="stats" class="card" style="display:none;">
+        <h3>Estadísticas de Servicios</h3>
+        <p>Visualiza tus peticiones y servicios atendidos.</p>
+        <canvas id="servicesChart" width="400" height="180"></canvas>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Mostrar sección activa
+    function showSection(id) {
+      document.querySelectorAll('.card').forEach(el => el.style.display = 'none');
+      document.getElementById(id).style.display = 'block';
+      document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+      event.target.closest('.menu-item').classList.add('active');
+
+      if (id === 'stats') {
+        renderChart();
+      }
+    }
+
+    // Mostrar nombre del usuario
+    document.addEventListener('DOMContentLoaded', () => {
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      if (userData.name) {
+        document.getElementById('welcomeTitle').textContent = `Bienvenido(a), ${userData.name}`;
+      } else {
+        document.getElementById('welcomeTitle').textContent = 'Bienvenido(a), Usuario';
+      }
+    });
+
+    // Cerrar sesión
+    function logout() {
+      localStorage.clear();
+      window.location.href = "login.html";
+    }
+
+    // Solicitud de Servicio
+    function goToService() {
+        // Navegar a la página de solicitud completa
+        window.location.href = "solicitud-servicio.html";
+    }
+    
+    // Renderizar gráfico
+    function renderChart() {
+      const ctx = document.getElementById('servicesChart');
+      if (ctx.chart) ctx.chart.destroy();
+
+      ctx.chart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo'],
+          datasets: [
+            {
+              label: 'Solicitudes Registradas',
+              data: [12, 19, 7, 14, 20],
+              backgroundColor: 'rgba(102, 126, 234, 0.6)',
+              borderColor: '#667eea',
+              borderWidth: 1
+            },
+            {
+              label: 'Servicios Atendidos',
+              data: [8, 15, 6, 11, 18],
+              backgroundColor: 'rgba(118, 75, 162, 0.6)',
+              borderColor: '#764ba2',
+              borderWidth: 1
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,1526 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Solicitar Servicio - ServiciosPro</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #667eea;
+            --primary-dark: #5a6fd8;
+            --secondary-color: #764ba2;
+            --success-color: #28a745;
+            --error-color: #dc3545;
+            --warning-color: #ffc107;
+            --info-color: #17a2b8;
+            --light-gray: #f8f9fa;
+            --medium-gray: #6c757d;
+            --dark-gray: #343a40;
+            --border-color: #e9ecef;
+            --shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            padding: 30px;
+            position: relative;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 120"><path d="M0,0V46.29c47.79,22.2,103.59,32.17,158,28,70.36-5.37,136.33-33.31,206.8-37.5C438.64,32.43,512.34,53.67,583,72.05c69.27,18,138.3,24.88,209.4,13.08,36.15-6,69.85-17.84,104.45-29.34C989.49,25,1113-14.29,1200,52.47V0Z" opacity=".25" fill="%23ffffff"/></svg>') no-repeat bottom;
+            background-size: cover;
+            opacity: 0.1;
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .header p {
+            font-size: 16px;
+            opacity: 0.9;
+        }
+
+        .provider-info {
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .provider-avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .provider-details h3 {
+            font-size: 18px;
+            margin-bottom: 5px;
+        }
+
+        .provider-rating {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+        }
+
+        .form-content {
+            padding: 40px;
+        }
+
+        .progress-steps {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            position: relative;
+        }
+
+        .progress-steps::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--border-color);
+            z-index: 0;
+        }
+
+        .progress-line {
+            position: absolute;
+            top: 20px;
+            left: 0;
+            height: 2px;
+            background: var(--primary-color);
+            transition: width 0.3s ease;
+            z-index: 1;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            position: relative;
+            z-index: 2;
+            flex: 1;
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: white;
+            border: 3px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .step.active .step-circle {
+            background: var(--primary-color);
+            border-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+        }
+
+        .step.completed .step-circle {
+            background: var(--success-color);
+            border-color: var(--success-color);
+            color: white;
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: var(--medium-gray);
+            font-weight: 500;
+            text-align: center;
+        }
+
+        .step.active .step-label {
+            color: var(--primary-color);
+            font-weight: 600;
+        }
+
+        .form-step {
+            display: none;
+        }
+
+        .form-step.active {
+            display: block;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .form-section {
+            margin-bottom: 30px;
+        }
+
+        .section-title {
+            font-size: 18px;
+            color: var(--dark-gray);
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--dark-gray);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .form-label .required {
+            color: var(--error-color);
+            margin-left: 3px;
+        }
+
+        .form-label .hint {
+            color: var(--medium-gray);
+            font-weight: 400;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        .form-input,
+        .form-textarea,
+        .form-select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            font-size: 15px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            background: var(--light-gray);
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .form-select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background: white;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .char-counter {
+            text-align: right;
+            font-size: 12px;
+            color: var(--medium-gray);
+            margin-top: 5px;
+        }
+
+        .char-counter.warning {
+            color: var(--warning-color);
+        }
+
+        .char-counter.error {
+            color: var(--error-color);
+        }
+
+        .address-selector {
+            display: grid;
+            gap: 15px;
+        }
+
+        .address-card {
+            padding: 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .address-card:hover {
+            border-color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .address-card.selected {
+            border-color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .address-card.selected::after {
+            content: '✓';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 24px;
+            height: 24px;
+            background: var(--primary-color);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+        }
+
+        .address-type {
+            font-weight: 600;
+            color: var(--dark-gray);
+            margin-bottom: 5px;
+        }
+
+        .address-details {
+            font-size: 13px;
+            color: var(--medium-gray);
+        }
+
+        .new-address-btn {
+            width: 100%;
+            padding: 12px;
+            border: 2px dashed var(--border-color);
+            background: transparent;
+            border-radius: 10px;
+            cursor: pointer;
+            color: var(--primary-color);
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .new-address-btn:hover {
+            border-color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .datetime-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .urgency-selector {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .urgency-option {
+            padding: 20px;
+            border: 2px solid var(--border-color);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .urgency-option:hover {
+            border-color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .urgency-option.selected {
+            border-color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .urgency-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .urgency-title {
+            font-weight: 600;
+            color: var(--dark-gray);
+            margin-bottom: 5px;
+        }
+
+        .urgency-description {
+            font-size: 12px;
+            color: var(--medium-gray);
+        }
+
+        .photo-upload-area {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .photo-slot {
+            aspect-ratio: 1;
+            border: 2px dashed var(--border-color);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            background: var(--light-gray);
+        }
+
+        .photo-slot:hover {
+            border-color: var(--primary-color);
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .photo-slot img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 8px;
+        }
+
+        .photo-slot .upload-icon {
+            font-size: 32px;
+            color: var(--medium-gray);
+            margin-bottom: 5px;
+        }
+
+        .photo-slot .upload-text {
+            font-size: 12px;
+            color: var(--medium-gray);
+            text-align: center;
+        }
+
+        .remove-photo-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 28px;
+            height: 28px;
+            background: var(--error-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            z-index: 10;
+        }
+
+        .photo-slot.has-image .remove-photo-btn {
+            display: flex;
+        }
+
+        .budget-input-wrapper {
+            position: relative;
+        }
+
+        .currency-symbol {
+            position: absolute;
+            left: 16px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--medium-gray);
+            font-weight: 600;
+        }
+
+        .budget-input {
+            padding-left: 40px;
+        }
+
+        .summary-section {
+            background: var(--light-gray);
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+        }
+
+        .summary-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .summary-item:last-child {
+            border-bottom: none;
+        }
+
+        .summary-label {
+            color: var(--medium-gray);
+            font-size: 14px;
+        }
+
+        .summary-value {
+            color: var(--dark-gray);
+            font-weight: 500;
+            font-size: 14px;
+        }
+
+        .summary-photos {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .summary-photo-thumb {
+            width: 50px;
+            height: 50px;
+            border-radius: 6px;
+            object-fit: cover;
+        }
+
+        .form-navigation {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            padding-top: 20px;
+            border-top: 2px solid var(--border-color);
+        }
+
+        .btn {
+            padding: 14px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: var(--primary-color);
+            border: 2px solid var(--primary-color);
+        }
+
+        .btn-secondary:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn .spinner {
+            display: none;
+            width: 18px;
+            height: 18px;
+            border: 2px solid transparent;
+            border-top: 2px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        .btn.loading .spinner {
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .alert {
+            padding: 15px 20px;
+            border-radius: 10px;
+            margin-bottom: 25px;
+            font-size: 14px;
+            display: none;
+            animation: slideDown 0.3s ease;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .alert-success {
+            background: rgba(40, 167, 69, 0.1);
+            color: var(--success-color);
+            border: 2px solid rgba(40, 167, 69, 0.2);
+        }
+
+        .alert-error {
+            background: rgba(220, 53, 69, 0.1);
+            color: var(--error-color);
+            border: 2px solid rgba(220, 53, 69, 0.2);
+        }
+
+        .alert-warning {
+            background: rgba(255, 193, 7, 0.1);
+            color: #856404;
+            border: 2px solid rgba(255, 193, 7, 0.2);
+        }
+
+        .alert-info {
+            background: rgba(23, 162, 184, 0.1);
+            color: var(--info-color);
+            border: 2px solid rgba(23, 162, 184, 0.2);
+        }
+
+        .success-animation {
+            text-align: center;
+            padding: 40px 20px;
+        }
+
+        .success-icon {
+            font-size: 80px;
+            animation: successPulse 0.5s ease;
+        }
+
+        @keyframes successPulse {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        .success-title {
+            font-size: 24px;
+            color: var(--dark-gray);
+            margin: 20px 0 10px;
+        }
+
+        .success-message {
+            color: var(--medium-gray);
+            margin-bottom: 30px;
+        }
+
+        .request-id {
+            display: inline-block;
+            background: var(--light-gray);
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-family: monospace;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-color);
+            margin: 20px 0;
+        }
+
+        @media (max-width: 768px) {
+            .form-content {
+                padding: 25px;
+            }
+
+            .datetime-grid,
+            .urgency-selector {
+                grid-template-columns: 1fr;
+            }
+
+            .photo-upload-area {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+
+            .form-navigation {
+                flex-direction: column-reverse;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>📋 Solicitar Servicio</h1>
+                <p>Completa los detalles de tu solicitud</p>
+                
+                <div class="provider-info" id="providerInfo">
+                    <div class="provider-avatar">👨‍🔧</div>
+                    <div class="provider-details">
+                        <h3 id="providerName">Cargando...</h3>
+                        <div class="provider-rating" id="providerRating"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-content">
+            <div id="alertContainer"></div>
+
+            <!-- Progress Steps -->
+            <div class="progress-steps">
+                <div class="progress-line" id="progressLine" style="width: 0%"></div>
+                <div class="step active" data-step="1">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Descripción</div>
+                </div>
+                <div class="step" data-step="2">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Ubicación</div>
+                </div>
+                <div class="step" data-step="3">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Fecha y Hora</div>
+                </div>
+                <div class="step" data-step="4">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Confirmar</div>
+                </div>
+            </div>
+
+            <form id="serviceRequestForm">
+                <!-- Step 1: Descripción del Servicio -->
+                <div class="form-step active" data-step="1">
+                    <div class="form-section">
+                        <h3 class="section-title">📝 Descripción del Trabajo</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                ¿Qué trabajo necesitas?
+                                <span class="required">*</span>
+                                <span class="hint">(Mínimo 20 caracteres)</span>
+                            </label>
+                            <textarea 
+                                class="form-textarea" 
+                                id="description" 
+                                name="description" 
+                                placeholder="Describe detalladamente el trabajo que necesitas..."
+                                required
+                                minlength="20"
+                                maxlength="1000"
+                            ></textarea>
+                            <div class="char-counter" id="descCounter">0/1000 caracteres (mínimo 20)</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Presupuesto Estimado
+                                <span class="required">*</span>
+                            </label>
+                            <div class="budget-input-wrapper">
+                                <span class="currency-symbol">S/</span>
+                                <input 
+                                    type="number" 
+                                    class="form-input budget-input" 
+                                    id="budget" 
+                                    name="budget" 
+                                    placeholder="150"
+                                    min="20"
+                                    step="10"
+                                    required
+                                >
+                            </div>
+                            <div style="font-size: 12px; color: var(--medium-gray); margin-top: 5px;">
+                                Este es un presupuesto referencial. El proveedor puede ajustarlo según la evaluación del trabajo.
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Fotos del Área de Trabajo (Opcional)
+                                <span class="hint">(Máximo 3 fotos, 5MB cada una)</span>
+                            </label>
+                            <div class="photo-upload-area" id="photoUploadArea">
+                                <div class="photo-slot" onclick="selectPhoto(0)">
+                                    <div class="upload-icon">📷</div>
+                                    <div class="upload-text">Foto 1</div>
+                                    <input type="file" accept="image/*" style="display: none;" onchange="previewPhoto(this, 0)">
+                                    <button type="button" class="remove-photo-btn" onclick="removePhoto(event, 0)">×</button>
+                                </div>
+                                <div class="photo-slot" onclick="selectPhoto(1)">
+                                    <div class="upload-icon">📷</div>
+                                    <div class="upload-text">Foto 2</div>
+                                    <input type="file" accept="image/*" style="display: none;" onchange="previewPhoto(this, 1)">
+                                    <button type="button" class="remove-photo-btn" onclick="removePhoto(event, 1)">×</button>
+                                </div>
+                                <div class="photo-slot" onclick="selectPhoto(2)">
+                                    <div class="upload-icon">📷</div>
+                                    <div class="upload-text">Foto 3</div>
+                                    <input type="file" accept="image/*" style="display: none;" onchange="previewPhoto(this, 2)">
+                                    <button type="button" class="remove-photo-btn" onclick="removePhoto(event, 2)">×</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 2: Ubicación -->
+                <div class="form-step" data-step="2">
+                    <div class="form-section">
+                        <h3 class="section-title">📍 Ubicación del Servicio</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                Selecciona una dirección guardada
+                                <span class="required">*</span>
+                            </label>
+                            <div class="address-selector" id="addressSelector">
+                                <div class="address-card" onclick="selectAddress(this, 'home')">
+                                    <div class="address-type">🏠 Casa</div>
+                                    <div class="address-details">
+                                        Av. Larco 1234, Departamento 5B<br>
+                                        Miraflores, Lima<br>
+                                        <small>Cerca al parque Kennedy</small>
+                                    </div>
+                                </div>
+
+                                <div class="address-card" onclick="selectAddress(this, 'office')">
+                                    <div class="address-type">🏢 Oficina</div>
+                                    <div class="address-details">
+                                        Jr. Las Begonias 567, Piso 8<br>
+                                        San Isidro, Lima<br>
+                                        <small>Torre empresarial</small>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <button type="button" class="new-address-btn" onclick="toggleNewAddress()">
+                                ➕ Agregar Nueva Dirección
+                            </button>
+                        </div>
+
+                        <div id="newAddressForm" style="display: none; margin-top: 20px;">
+                            <div class="form-group">
+                                <label class="form-label">Dirección Completa</label>
+                                <input type="text" class="form-input" id="newAddress" name="newAddress" placeholder="Av. Principal 123, Departamento 4B">
+                            </div>
+                            
+                            <div class="datetime-grid">
+                                <div class="form-group">
+                                    <label class="form-label">Distrito</label>
+                                    <select class="form-select" id="district" name="district">
+                                        <option value="">Seleccionar distrito</option>
+                                        <option value="miraflores">Miraflores</option>
+                                        <option value="san_isidro">San Isidro</option>
+                                        <option value="surco">Santiago de Surco</option>
+                                        <option value="la_molina">La Molina</option>
+                                        <option value="san_borja">San Borja</option>
+                                        <option value="barranco">Barranco</option>
+                                    </select>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label class="form-label">Código Postal</label>
+                                    <input type="text" class="form-input" id="zipCode" name="zipCode" placeholder="15074">
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Referencias</label>
+                                <input type="text" class="form-input" id="reference" name="reference" placeholder="Casa de color blanco, portón negro">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 3: Fecha y Hora -->
+                <div class="form-step" data-step="3">
+                    <div class="form-section">
+                        <h3 class="section-title">📅 Fecha y Hora Preferida</h3>
+                        
+                        <div class="datetime-grid">
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Fecha Preferida
+                                    <span class="required">*</span>
+                                </label>
+                                <input 
+                                    type="date" 
+                                    class="form-input" 
+                                    id="serviceDate" 
+                                    name="serviceDate" 
+                                    required
+                                >
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">
+                                    Hora Preferida
+                                    <span class="required">*</span>
+                                </label>
+                                <input 
+                                    type="time" 
+                                    class="form-input" 
+                                    id="serviceTime" 
+                                    name="serviceTime" 
+                                    required
+                                >
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(23, 162, 184, 0.1); padding: 15px; border-radius: 8px; margin-top: 15px; font-size: 13px; color: #0c5460;">
+                            ℹ️ La fecha y hora son referenciales. El proveedor puede sugerir ajustes según su disponibilidad.
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="section-title">⚡ Urgencia del Servicio</h3>
+                        
+                        <div class="urgency-selector">
+                            <div class="urgency-option selected" onclick="selectUrgency(this, 'normal')">
+                                <div class="urgency-icon">🕐</div>
+                                <div class="urgency-title">Normal</div>
+                                <div class="urgency-description">
+                                    Respuesta esperada en 24-48 horas
+                                </div>
+                            </div>
+                            
+                            <div class="urgency-option" onclick="selectUrgency(this, 'urgent')">
+                                <div class="urgency-icon">⚡</div>
+                                <div class="urgency-title">Urgente</div>
+                                <div class="urgency-description">
+                                    Necesito atención lo antes posible
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <input type="hidden" id="urgency" name="urgency" value="normal">
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="section-title">💬 Información Adicional (Opcional)</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label">
+                                Comentarios o instrucciones especiales
+                            </label>
+                            <textarea 
+                                class="form-textarea" 
+                                id="additionalNotes" 
+                                name="additionalNotes" 
+                                placeholder="Ej: Por favor tocar el timbre 3 veces..."
+                                maxlength="500"
+                                style="min-height: 80px;"
+                            ></textarea>
+                            <div class="char-counter" id="notesCounter">0/500 caracteres</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Step 4: Confirmar Solicitud -->
+                <div class="form-step" data-step="4">
+                    <div class="form-section">
+                        <h3 class="section-title">✅ Resumen de la Solicitud</h3>
+                        
+                        <div class="summary-section">
+                            <div class="summary-item">
+                                <div class="summary-label">Proveedor:</div>
+                                <div class="summary-value" id="summaryProvider">-</div>
+                            </div>
+                            
+                            <div class="summary-item">
+                                <div class="summary-label">Descripción del trabajo:</div>
+                                <div class="summary-value" id="summaryDescription">-</div>
+                            </div>
+                            
+                            <div class="summary-item">
+                                <div class="summary-label">Ubicación:</div>
+                                <div class="summary-value" id="summaryLocation">-</div>
+                            </div>
+                            
+                            <div class="summary-item">
+                                <div class="summary-label">Fecha y hora:</div>
+                                <div class="summary-value" id="summaryDateTime">-</div>
+                            </div>
+                            
+                            <div class="summary-item">
+                                <div class="summary-label">Presupuesto estimado:</div>
+                                <div class="summary-value" id="summaryBudget">-</div>
+                            </div>
+                            
+                            <div class="summary-item">
+                                <div class="summary-label">Urgencia:</div>
+                                <div class="summary-value" id="summaryUrgency">-</div>
+                            </div>
+                            
+                            <div class="summary-item" id="summaryPhotosContainer" style="display: none;">
+                                <div class="summary-label">Fotos adjuntas:</div>
+                                <div class="summary-value">
+                                    <div class="summary-photos" id="summaryPhotos"></div>
+                                </div>
+                            </div>
+                            
+                            <div class="summary-item" id="summaryNotesContainer" style="display: none;">
+                                <div class="summary-label">Notas adicionales:</div>
+                                <div class="summary-value" id="summaryNotes">-</div>
+                            </div>
+                        </div>
+
+                        <div style="background: rgba(255, 193, 7, 0.1); padding: 20px; border-radius: 12px; border: 2px solid rgba(255, 193, 7, 0.3); margin-top: 20px;">
+                            <h4 style="color: #856404; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+                                ℹ️ Información Importante
+                            </h4>
+                            <ul style="color: #856404; font-size: 13px; line-height: 1.8; padding-left: 20px;">
+                                <li>El proveedor recibirá tu solicitud inmediatamente</li>
+                                <li>Tiene hasta <strong>48 horas</strong> para responder</li>
+                                <li>Recibirás una notificación cuando responda</li>
+                                <li>Puedes cancelar la solicitud si está en estado "Pendiente"</li>
+                            </ul>
+                        </div>
+
+                        <div class="form-group" style="margin-top: 25px;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" id="terms" name="terms" required style="width: 18px; height: 18px;">
+                                <span style="font-size: 14px;">
+                                    Acepto los <a href="#" style="color: var(--primary-color);">términos y condiciones</a> 
+                                    del servicio
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Success Screen -->
+                <div class="form-step" data-step="5">
+                    <div class="success-animation">
+                        <div class="success-icon">✅</div>
+                        <h2 class="success-title">¡Solicitud Enviada con Éxito!</h2>
+                        <p class="success-message">
+                            Tu solicitud ha sido enviada al proveedor. Te notificaremos cuando responda.
+                        </p>
+                        
+                        <div style="background: var(--light-gray); padding: 20px; border-radius: 12px; margin: 25px 0;">
+                            <div style="font-size: 14px; color: var(--medium-gray); margin-bottom: 10px;">
+                                Código de Solicitud:
+                            </div>
+                            <div class="request-id" id="requestId">SR-2024-000000</div>
+                            <div style="font-size: 13px; color: var(--medium-gray); margin-top: 15px;">
+                                📧 Hemos enviado los detalles a tu correo electrónico<br>
+                                📱 Recibirás notificaciones sobre el estado de tu solicitud
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: 15px; justify-content: center; margin-top: 30px; flex-wrap: wrap;">
+                            <button type="button" class="btn btn-secondary" onclick="goToRequests()">
+                                📋 Ver Mis Solicitudes
+                            </button>
+                            <button type="button" class="btn btn-primary" onclick="goHome()">
+                                🏠 Ir al Inicio
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Navigation Buttons -->
+                <div class="form-navigation" id="formNavigation">
+                    <button type="button" class="btn btn-secondary" id="prevBtn" onclick="previousStep()" style="display: none;">
+                        ← Anterior
+                    </button>
+                    <button type="button" class="btn btn-primary" id="nextBtn" onclick="nextStep()">
+                        Siguiente →
+                    </button>
+                    <button type="submit" class="btn btn-primary" id="submitBtn" style="display: none;">
+                        <span class="spinner"></span>
+                        <span class="button-text">📤 Enviar Solicitud</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // SERVICIO DE API
+        // ============================================
+        class SolicitudService {
+            constructor() {
+                this.baseURL = '/ContactoProfesionalesWeb/api';
+            }
+
+            async crearSolicitud(solicitudData) {
+                try {
+                    const response = await fetch(`${this.baseURL}/solicitudes`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.getToken()}`
+                        },
+                        body: JSON.stringify(solicitudData)
+                    });
+
+                    const data = await response.json();
+
+                    if (response.ok && data.success) {
+                        return { success: true, data: data.data };
+                    } else {
+                        return { success: false, message: data.error || 'Error al crear solicitud' };
+                    }
+                } catch (error) {
+                    console.error('Error en solicitud:', error);
+                    return { success: false, message: 'Error de conexión con el servidor' };
+                }
+            }
+
+            getToken() {
+                return localStorage.getItem('authToken') || '';
+            }
+        }
+
+        // Instancia global
+        const solicitudService = new SolicitudService();
+
+        // ============================================
+        // VARIABLES GLOBALES
+        // ============================================
+        let currentStep = 1;
+        const totalSteps = 4;
+        let uploadedPhotos = [];
+        let selectedAddress = null;
+        let profesionalId = null;
+
+        // ============================================
+        // INICIALIZACIÓN
+        // ============================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Obtener ID del profesional desde URL
+            const urlParams = new URLSearchParams(window.location.search);
+            profesionalId = urlParams.get('profesionalId');
+
+            if (!profesionalId) {
+                showAlert('No se especificó el profesional', 'error');
+                setTimeout(() => {
+                    window.location.href = '/ContactoProfesionalesWeb/busqueda.html';
+                }, 2000);
+                return;
+            }
+
+            // Cargar información del profesional
+            cargarInfoProfesional(profesionalId);
+
+            // Set minimum date to today
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('serviceDate').setAttribute('min', today);
+
+            // Character counters
+            document.getElementById('description').addEventListener('input', function() {
+                updateCharCounter('description', 'descCounter', 1000, 20);
+            });
+
+            document.getElementById('additionalNotes').addEventListener('input', function() {
+                updateCharCounter('additionalNotes', 'notesCounter', 500, 0);
+            });
+
+            // Form submission
+            document.getElementById('serviceRequestForm').addEventListener('submit', handleSubmit);
+        });
+
+        // ============================================
+        // CARGAR INFO DEL PROFESIONAL
+        // ============================================
+        async function cargarInfoProfesional(id) {
+            // En un caso real, hacer fetch al backend
+            // Por ahora, datos de ejemplo
+            const profesionalData = {
+                nombre: 'Juan Pérez',
+                especialidad: 'Electricista',
+                calificacion: 4.9,
+                resenas: 127,
+                ubicacion: 'Miraflores, Lima'
+            };
+
+            document.getElementById('providerName').textContent = 
+                `${profesionalData.nombre} - ${profesionalData.especialidad}`;
+            
+            document.getElementById('providerRating').innerHTML = `
+                <span>⭐⭐⭐⭐⭐</span>
+                <span>${profesionalData.calificacion} (${profesionalData.resenas} reseñas)</span>
+                <span>•</span>
+                <span>${profesionalData.ubicacion}</span>
+            `;
+
+            document.getElementById('summaryProvider').textContent = 
+                `${profesionalData.nombre} - ${profesionalData.especialidad}`;
+        }
+
+        // ============================================
+        // CHARACTER COUNTER
+        // ============================================
+        function updateCharCounter(inputId, counterId, max, min = 0) {
+            const input = document.getElementById(inputId);
+            const counter = document.getElementById(counterId);
+            const current = input.value.length;
+            
+            if (min > 0) {
+                counter.textContent = `${current}/${max} caracteres (mínimo ${min})`;
+            } else {
+                counter.textContent = `${current}/${max} caracteres`;
+            }
+            
+            if (current < min && current > 0) {
+                counter.classList.add('error');
+                counter.classList.remove('warning');
+            } else if (current > max * 0.9) {
+                counter.classList.add('warning');
+                counter.classList.remove('error');
+            } else {
+                counter.classList.remove('warning', 'error');
+            }
+        }
+
+        // ============================================
+        // PHOTO UPLOAD
+        // ============================================
+        function selectPhoto(index) {
+            const slot = document.querySelectorAll('.photo-slot')[index];
+            const input = slot.querySelector('input[type="file"]');
+            input.click();
+        }
+
+        function previewPhoto(input, index) {
+            const file = input.files[0];
+            if (file) {
+                if (file.size > 5 * 1024 * 1024) {
+                    showAlert('La foto no debe superar los 5MB', 'error');
+                    input.value = '';
+                    return;
+                }
+                
+                if (!file.type.startsWith('image/')) {
+                    showAlert('El archivo debe ser una imagen', 'error');
+                    input.value = '';
+                    return;
+                }
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    const slot = document.querySelectorAll('.photo-slot')[index];
+                    slot.innerHTML = `
+                        <img src="${e.target.result}" alt="Photo ${index + 1}">
+                        <button type="button" class="remove-photo-btn" onclick="removePhoto(event, ${index})">×</button>
+                    `;
+                    slot.classList.add('has-image');
+                    slot.onclick = null;
+                    
+                    uploadedPhotos[index] = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function removePhoto(event, index) {
+            event.stopPropagation();
+            const slot = document.querySelectorAll('.photo-slot')[index];
+            slot.innerHTML = `
+                <div class="upload-icon">📷</div>
+                <div class="upload-text">Foto ${index + 1}</div>
+                <input type="file" accept="image/*" style="display: none;" onchange="previewPhoto(this, ${index})">
+                <button type="button" class="remove-photo-btn" onclick="removePhoto(event, ${index})">×</button>
+            `;
+            slot.classList.remove('has-image');
+            slot.onclick = function() { selectPhoto(index); };
+            
+            uploadedPhotos[index] = null;
+        }
+
+        // ============================================
+        // ADDRESS SELECTION
+        // ============================================
+        function selectAddress(element, addressType) {
+            document.querySelectorAll('.address-card').forEach(card => {
+                card.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            selectedAddress = addressType;
+            
+            document.getElementById('newAddressForm').style.display = 'none';
+        }
+
+        function toggleNewAddress() {
+            const form = document.getElementById('newAddressForm');
+            const display = form.style.display;
+            
+            if (display === 'none') {
+                form.style.display = 'block';
+                document.querySelectorAll('.address-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                selectedAddress = 'new';
+            } else {
+                form.style.display = 'none';
+                selectedAddress = null;
+            }
+        }
+
+        // ============================================
+        // URGENCY SELECTION
+        // ============================================
+        function selectUrgency(element, urgency) {
+            document.querySelectorAll('.urgency-option').forEach(opt => {
+                opt.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            document.getElementById('urgency').value = urgency;
+        }
+
+        // ============================================
+        // NAVIGATION LOGIC
+        // ============================================
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                if (!validateStep(currentStep)) return;
+
+                currentStep++;
+                updateSteps();
+            } else if (currentStep === totalSteps) {
+                handleSubmit();
+            }
+        }
+
+        function previousStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateSteps();
+            }
+        }
+
+        function updateSteps() {
+            document.querySelectorAll('.form-step').forEach((step, index) => {
+                step.classList.toggle('active', index + 1 === currentStep);
+            });
+
+            document.querySelectorAll('.step').forEach((step, index) => {
+                step.classList.toggle('active', index + 1 === currentStep);
+                step.classList.toggle('completed', index + 1 < currentStep);
+            });
+
+            updateProgress();
+
+            document.getElementById('prevBtn').style.display = currentStep > 1 ? 'inline-flex' : 'none';
+            document.getElementById('nextBtn').style.display = currentStep < totalSteps ? 'inline-flex' : 'none';
+            document.getElementById('submitBtn').style.display = currentStep === totalSteps ? 'inline-flex' : 'none';
+
+            if (currentStep === totalSteps) {
+                updateSummary();
+            }
+        }
+
+        function updateProgress() {
+            const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
+            document.getElementById('progressLine').style.width = `${progress}%`;
+        }
+
+        // ============================================
+        // VALIDATIONS
+        // ============================================
+        function validateStep(step) {
+            switch (step) {
+                case 1:
+                    const desc = document.getElementById('description').value.trim();
+                    const budget = document.getElementById('budget').value;
+                    if (desc.length < 20) {
+                        showAlert('La descripción debe tener al menos 20 caracteres', 'error');
+                        return false;
+                    }
+                    if (!budget || budget < 20) {
+                        showAlert('Debes ingresar un presupuesto válido (mínimo S/20)', 'error');
+                        return false;
+                    }
+                    break;
+
+                case 2:
+                    if (!selectedAddress && !document.getElementById('newAddress').value.trim()) {
+                        showAlert('Debes seleccionar o ingresar una dirección', 'error');
+                        return false;
+                    }
+                    break;
+
+                case 3:
+                    const date = document.getElementById('serviceDate').value;
+                    const time = document.getElementById('serviceTime').value;
+                    if (!date || !time) {
+                        showAlert('Debes seleccionar fecha y hora', 'error');
+                        return false;
+                    }
+                    break;
+            }
+            return true;
+        }
+
+        // ============================================
+        // SUMMARY
+        // ============================================
+        function updateSummary() {
+            const desc = document.getElementById('description').value.trim();
+            const budget = document.getElementById('budget').value;
+            const address = selectedAddress === 'new'
+                ? document.getElementById('newAddress').value
+                : selectedAddress === 'home' ? 'Casa (Av. Larco 1234, Miraflores)'
+                : 'Oficina (Jr. Las Begonias 567, San Isidro)';
+            const date = document.getElementById('serviceDate').value;
+            const time = document.getElementById('serviceTime').value;
+            const urgency = document.getElementById('urgency').value;
+            const notes = document.getElementById('additionalNotes').value.trim();
+
+            document.getElementById('summaryDescription').textContent = desc;
+            document.getElementById('summaryBudget').textContent = `S/ ${budget}`;
+            document.getElementById('summaryLocation').textContent = address;
+            document.getElementById('summaryDateTime').textContent = `${date} ${time}`;
+            document.getElementById('summaryUrgency').textContent = urgency === 'urgent' ? 'Urgente ⚡' : 'Normal 🕐';
+
+            const photosContainer = document.getElementById('summaryPhotosContainer');
+            const photosArea = document.getElementById('summaryPhotos');
+            photosArea.innerHTML = '';
+            const validPhotos = uploadedPhotos.filter(Boolean);
+
+            if (validPhotos.length > 0) {
+                photosContainer.style.display = 'flex';
+                validPhotos.forEach(src => {
+                    const img = document.createElement('img');
+                    img.src = src;
+                    img.classList.add('summary-photo-thumb');
+                    photosArea.appendChild(img);
+                });
+            } else {
+                photosContainer.style.display = 'none';
+            }
+
+            const notesContainer = document.getElementById('summaryNotesContainer');
+            if (notes) {
+                notesContainer.style.display = 'flex';
+                document.getElementById('summaryNotes').textContent = notes;
+            } else {
+                notesContainer.style.display = 'none';
+            }
+        }
+
+        // ============================================
+        // FORM SUBMISSION
+        // ============================================
+        async function handleSubmit(event) {
+            if (event) event.preventDefault();
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.classList.add('loading');
+            submitBtn.disabled = true;
+
+            const solicitudData = {
+                profesionalId,
+                descripcion: document.getElementById('description').value.trim(),
+                presupuestoEstimado: parseFloat(document.getElementById('budget').value),
+                direccion: selectedAddress === 'new'
+                    ? document.getElementById('newAddress').value
+                    : selectedAddress,
+                distrito: document.getElementById('district').value || null,
+                codigoPostal: document.getElementById('zipCode').value || null,
+                referencia: document.getElementById('reference').value || null,
+                fechaServicio: `${document.getElementById('serviceDate').value}T${document.getElementById('serviceTime').value}:00`,
+                urgencia: document.getElementById('urgency').value,
+                notasAdicionales: document.getElementById('additionalNotes').value.trim(),
+                fotosUrls: uploadedPhotos.filter(Boolean),
+                estado: "pendiente"
+            };
+
+            const result = await solicitudService.crearSolicitud(solicitudData);
+
+            submitBtn.classList.remove('loading');
+            submitBtn.disabled = false;
+
+            if (result.success) {
+                currentStep = 5;
+                updateSteps();
+                document.getElementById('requestId').textContent = result.data.codigoSolicitud || 'SR-2024-000001';
+            } else {
+                showAlert(result.message, 'error');
+            }
+        }
+
+        // ============================================
+        // ALERT HANDLER
+        // ============================================
+        function showAlert(message, type = 'info') {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `
+                <div class="alert alert-${type}">
+                    ${message}
+                </div>
+            `;
+            const alert = alertContainer.querySelector('.alert');
+            alert.style.display = 'block';
+            setTimeout(() => { alert.style.display = 'none'; }, 4000);
+        }
+
+        // ============================================
+        // REDIRECCIONES
+        // ============================================
+        function goToRequests() {
+            window.location.href = '/ContactoProfesionalesWeb/mis-solicitudes.html';
+        }
+
+        function goHome() {
+            window.location.href = '/ContactoProfesionalesWeb/dashboard.html';
+        }
+    </script>
+</body>
+</html>

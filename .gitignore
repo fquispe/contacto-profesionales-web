@@ -1,0 +1,89 @@
+# Compiled class files
+*.class
+target/
+*.war
+*.ear
+*.jar
+!lib/*.jar
+
+# Log files
+*.log
+logs/
+*.log.*
+
+# Eclipse
+.classpath
+.project
+.settings/
+.metadata/
+.recommenders/
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# NetBeans
+nbproject/
+build/
+nbbuild/
+dist/
+nbdist/
+
+# Maven
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+
+# OS Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*~
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Configuration files with sensitive data
+# (Crear .example files para template)
+database.properties
+application.properties
+
+# Backup files
+*.swp
+*.bak
+*.tmp
+*.temp
+
+# Build directories
+build/
+bin/
+out/
+
+# Test coverage
+.coverage
+htmlcov/
+coverage/
+
+# Tomcat
+/Servers/
+.tomcat/
+
+# Node modules (si usas npm)
+node_modules/
+package-lock.json
+
+# Environment files
+.env
+.env.local
+.env.*.local
