@@ -181,9 +181,9 @@
     <nav class="menu">
       <div class="menu-item active" onclick="showSection('home')">🏠 <span>Inicio</span></div>
       <div class="menu-item" onclick="goToActualizarInformacion()">👤 <span>Actualizar Información</span></div>
-      <div class="menu-item" onclick="goToBuscarProfesional()">📝 <span>Solitud de Servicio</span></div>
-	  <div class="menu-item" onclick="goToProfesional()">👤 <span>Información Profesional</span></div>
-	  <div class="menu-item" onclick="goToBuscarProfesional()">👤 <span>Buscar Profesional</span></div>
+      <div class="menu-item" onclick="goToListadoSolicitudes()">📋 <span>Mis Solicitudes</span></div>
+      <div class="menu-item" onclick="goToBuscarProfesional()">🔍 <span>Buscar Profesional</span></div>
+	  <div class="menu-item" onclick="goToProfesional()">🔧 <span>Información Profesional</span></div>
       <div class="menu-item" onclick="showSection('stats')">📊 <span>Estadísticas</span></div>
     </nav>
   </aside>
@@ -200,6 +200,19 @@
       <div id="home" class="card">
         <h3>Panel Principal</h3>
         <p>Desde aquí puedes gestionar tus solicitudes, ver tus servicios activos y mantener actualizada tu información personal.</p>
+      </div>
+
+      <!-- Sección de Solicitudes Recientes -->
+      <div id="home-solicitudes" class="card">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h3>📋 Mis Solicitudes Recientes</h3>
+          <button class="logout-btn" onclick="goToListadoSolicitudes()">Ver Todas</button>
+        </div>
+        <div id="solicitudesRecientesContainer">
+          <p style="text-align: center; color: var(--medium-gray); padding: 20px;">
+            Cargando solicitudes...
+          </p>
+        </div>
       </div>
 
       <!-- Información personal -->
@@ -256,7 +269,96 @@
       } else {
         document.getElementById('welcomeTitle').textContent = 'Bienvenido(a), Usuario';
       }
+
+      // Cargar solicitudes recientes
+      cargarSolicitudesRecientes();
     });
+
+    // Cargar solicitudes recientes
+    async function cargarSolicitudesRecientes() {
+      const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+      const usuarioId = userData.id;
+
+      if (!usuarioId) {
+        document.getElementById('solicitudesRecientesContainer').innerHTML =
+          '<p style="text-align: center; color: var(--medium-gray); padding: 20px;">No hay solicitudes disponibles</p>';
+        return;
+      }
+
+      try {
+        const response = await fetch('./api/solicitudes?tipo=cliente');
+        const data = await response.json();
+
+        if (data.success && data.data.solicitudes) {
+          const solicitudes = data.data.solicitudes.slice(0, 3); // Mostrar solo las 3 más recientes
+          mostrarSolicitudesRecientes(solicitudes);
+        } else {
+          throw new Error('Error al cargar solicitudes');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('solicitudesRecientesContainer').innerHTML =
+          '<p style="text-align: center; color: var(--error-color); padding: 20px;">Error al cargar solicitudes</p>';
+      }
+    }
+
+    // Mostrar solicitudes recientes
+    function mostrarSolicitudesRecientes(solicitudes) {
+      const container = document.getElementById('solicitudesRecientesContainer');
+
+      if (solicitudes.length === 0) {
+        container.innerHTML = `
+          <div style="text-align: center; padding: 30px;">
+            <div style="font-size: 48px; margin-bottom: 15px;">📭</div>
+            <p style="color: var(--medium-gray); margin-bottom: 15px;">No tienes solicitudes aún</p>
+            <button class="logout-btn" onclick="goToBuscarProfesional()">🔍 Buscar Profesionales</button>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = solicitudes.map(solicitud => {
+        const estado = solicitud.estado || 'pendiente';
+        const estadoColor = {
+          'pendiente': '#ffc107',
+          'aceptada': '#17a2b8',
+          'completada': '#28a745',
+          'rechazada': '#dc3545',
+          'cancelada': '#dc3545'
+        };
+        const estadoTexto = {
+          'pendiente': 'Pendiente',
+          'aceptada': 'Aceptada',
+          'completada': 'Completada',
+          'rechazada': 'Rechazada',
+          'cancelada': 'Cancelada'
+        };
+
+        const fecha = new Date(solicitud.fechaSolicitud).toLocaleDateString('es-PE', {
+          year: 'numeric',
+          month: 'short',
+          day: 'numeric'
+        });
+
+        return `
+          <div style="background: var(--light-gray); padding: 15px; border-radius: 10px; margin-bottom: 10px; border-left: 4px solid ${estadoColor[estado]};">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 10px;">
+              <div>
+                <div style="font-weight: 600; color: var(--dark-gray); margin-bottom: 5px;">
+                  ${solicitud.descripcion?.substring(0, 60) || 'Sin descripción'}${solicitud.descripcion?.length > 60 ? '...' : ''}
+                </div>
+                <div style="font-size: 13px; color: var(--medium-gray);">
+                  📅 ${fecha} • 💰 S/ ${solicitud.presupuestoEstimado?.toFixed(2) || '0.00'}
+                </div>
+              </div>
+              <span style="background: ${estadoColor[estado]}22; color: ${estadoColor[estado]}; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: 600;">
+                ${estadoTexto[estado]}
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
 
     // Cerrar sesión
     function logout() {
@@ -294,7 +396,12 @@
     function goToBuscarProfesional(){
     	window.location.href = "buscar-profesional.html";
     }
-    
+
+    //Listado de Solicitudes
+    function goToListadoSolicitudes(){
+    	window.location.href = "listado-solicitud-servicios.html";
+    }
+
     // Renderizar gráfico
     function renderChart() {
       const ctx = document.getElementById('servicesChart');
