@@ -698,24 +698,79 @@
                 justify-content: center;
             }
         }
+        
+        .btn-nav-back,
+		.btn-nav-dashboard {
+		    padding: 10px 20px;
+		    border: 2px solid white;
+		    border-radius: 8px;
+		    cursor: pointer;
+		    font-size: 14px;
+		    font-weight: 600;
+		    transition: all 0.3s ease;
+		    display: flex;
+		    align-items: center;
+		    gap: 8px;
+		    background: rgba(255, 255, 255, 0.1);
+		    color: white;
+		    backdrop-filter: blur(10px);
+		}
+		
+		.btn-nav-back:hover {
+		    background: rgba(255, 255, 255, 0.25);
+		    transform: translateY(-2px);
+		    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+		}
+		
+		.btn-nav-dashboard:hover {
+		    background: rgba(255, 255, 255, 0.25);
+		    transform: translateY(-2px);
+		    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+		}
+		
+		.btn-nav-back:active,
+		.btn-nav-dashboard:active {
+		    transform: translateY(0);
+		}
+		
+		/* Responsive para botones de navegación */
+		@media (max-width: 768px) {
+		    .btn-nav-back,
+		    .btn-nav-dashboard {
+		        padding: 8px 15px;
+		        font-size: 12px;
+		        flex: 1;
+		    }
+		}
+        
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <div class="header-content">
-                <h1>📋 Solicitar Servicio</h1>
-                <p>Completa los detalles de tu solicitud</p>
-                
-                <div class="provider-info" id="providerInfo">
-                    <div class="provider-avatar">👨‍🔧</div>
-                    <div class="provider-details">
-                        <h3 id="providerName">Cargando...</h3>
-                        <div class="provider-rating" id="providerRating"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+		    <div class="header-content">
+		        <!-- Botones de navegación -->
+		        <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+		            <button type="button" class="btn-nav-back" onclick="volverBusqueda()">
+		                🔍 Cambiar Profesional
+		            </button>
+		            <button type="button" class="btn-nav-dashboard" onclick="volverDashboard()">
+		                🏠 Volver al Dashboard
+		            </button>
+		        </div>
+		
+		        <h1>📋 Solicitar Servicio</h1>
+		        <p>Completa los detalles de tu solicitud</p>
+		        
+		        <div class="provider-info" id="providerInfo">
+		            <div class="provider-avatar">👨‍🔧</div>
+		            <div class="provider-details">
+		                <h3 id="providerName">Cargando...</h3>
+		                <div class="provider-rating" id="providerRating"></div>
+		            </div>
+		        </div>
+		    </div>
+		</div>
 
         <div class="form-content">
             <div id="alertContainer"></div>
@@ -741,7 +796,7 @@
                 </div>
             </div>
 
-            <form id="serviceRequestForm">
+            <form id="serviceRequestForm" novalidate>
                 <!-- Step 1: Descripción del Servicio -->
                 <div class="form-step active" data-step="1">
                     <div class="form-section">
@@ -1091,436 +1146,645 @@
         </div>
     </div>
 
-    <script>
-        // ============================================
-        // SERVICIO DE API
-        // ============================================
-        class SolicitudService {
-            constructor() {
-                this.baseURL = '/ContactoProfesionalesWeb/api';
-            }
-
-            async crearSolicitud(solicitudData) {
-                try {
-                    const response = await fetch(`${this.baseURL}/solicitudes`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${this.getToken()}`
-                        },
-                        body: JSON.stringify(solicitudData)
-                    });
-
-                    const data = await response.json();
-
-                    if (response.ok && data.success) {
-                        return { success: true, data: data.data };
-                    } else {
-                        return { success: false, message: data.error || 'Error al crear solicitud' };
-                    }
-                } catch (error) {
-                    console.error('Error en solicitud:', error);
-                    return { success: false, message: 'Error de conexión con el servidor' };
-                }
-            }
-
-            getToken() {
-                return localStorage.getItem('authToken') || '';
-            }
-        }
-
-        // Instancia global
-        const solicitudService = new SolicitudService();
-
-        // ============================================
-        // VARIABLES GLOBALES
-        // ============================================
-        let currentStep = 1;
-        const totalSteps = 4;
-        let uploadedPhotos = [];
-        let selectedAddress = null;
-        let profesionalId = null;
-
-        // ============================================
-        // INICIALIZACIÓN
-        // ============================================
-        document.addEventListener('DOMContentLoaded', function() {
-            // Obtener ID del profesional desde URL
-            const urlParams = new URLSearchParams(window.location.search);
-            profesionalId = urlParams.get('profesionalId');
-
-            if (!profesionalId) {
-                showAlert('No se especificó el profesional', 'error');
-                setTimeout(() => {
-                    window.location.href = '/ContactoProfesionalesWeb/buscar-profesional.html';
-                }, 2000);
-                return;
-            }
-
-            // Cargar información del profesional
-            cargarInfoProfesional(profesionalId);
-
-            // Set minimum date to today
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('serviceDate').setAttribute('min', today);
-
-            // Character counters
-            document.getElementById('description').addEventListener('input', function() {
-                updateCharCounter('description', 'descCounter', 1000, 20);
-            });
-
-            document.getElementById('additionalNotes').addEventListener('input', function() {
-                updateCharCounter('additionalNotes', 'notesCounter', 500, 0);
-            });
-
-            // Form submission
-            document.getElementById('serviceRequestForm').addEventListener('submit', handleSubmit);
-        });
-
-        // ============================================
-        // CARGAR INFO DEL PROFESIONAL
-        // ============================================
-        async function cargarInfoProfesional(id) {
-            // En un caso real, hacer fetch al backend
-            // Por ahora, datos de ejemplo
-            const profesionalData = {
-                nombre: 'Juan Pérez',
-                especialidad: 'Electricista',
-                calificacion: 4.9,
-                resenas: 127,
-                ubicacion: 'Miraflores, Lima'
-            };
-
-            document.getElementById('providerName').textContent = 
-                `${profesionalData.nombre} - ${profesionalData.especialidad}`;
-            
-            document.getElementById('providerRating').innerHTML = `
-                <span>⭐⭐⭐⭐⭐</span>
-                <span>${profesionalData.calificacion} (${profesionalData.resenas} reseñas)</span>
-                <span>•</span>
-                <span>${profesionalData.ubicacion}</span>
-            `;
-
-            document.getElementById('summaryProvider').textContent = 
-                `${profesionalData.nombre} - ${profesionalData.especialidad}`;
-        }
-
-        // ============================================
-        // CHARACTER COUNTER
-        // ============================================
-        function updateCharCounter(inputId, counterId, max, min = 0) {
-            const input = document.getElementById(inputId);
-            const counter = document.getElementById(counterId);
-            const current = input.value.length;
-            
-            if (min > 0) {
-                counter.textContent = `${current}/${max} caracteres (mínimo ${min})`;
-            } else {
-                counter.textContent = `${current}/${max} caracteres`;
-            }
-            
-            if (current < min && current > 0) {
-                counter.classList.add('error');
-                counter.classList.remove('warning');
-            } else if (current > max * 0.9) {
-                counter.classList.add('warning');
-                counter.classList.remove('error');
-            } else {
-                counter.classList.remove('warning', 'error');
-            }
-        }
-
-        // ============================================
-        // PHOTO UPLOAD
-        // ============================================
-        function selectPhoto(index) {
-            const slot = document.querySelectorAll('.photo-slot')[index];
-            const input = slot.querySelector('input[type="file"]');
-            input.click();
-        }
-
-        function previewPhoto(input, index) {
-            const file = input.files[0];
-            if (file) {
-                if (file.size > 5 * 1024 * 1024) {
-                    showAlert('La foto no debe superar los 5MB', 'error');
-                    input.value = '';
-                    return;
-                }
-                
-                if (!file.type.startsWith('image/')) {
-                    showAlert('El archivo debe ser una imagen', 'error');
-                    input.value = '';
-                    return;
-                }
-                
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const slot = document.querySelectorAll('.photo-slot')[index];
-                    slot.innerHTML = `
-                        <img src="${e.target.result}" alt="Photo ${index + 1}">
-                        <button type="button" class="remove-photo-btn" onclick="removePhoto(event, ${index})">×</button>
-                    `;
-                    slot.classList.add('has-image');
-                    slot.onclick = null;
-                    
-                    uploadedPhotos[index] = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            }
-        }
-
-        function removePhoto(event, index) {
-            event.stopPropagation();
-            const slot = document.querySelectorAll('.photo-slot')[index];
-            slot.innerHTML = `
-                <div class="upload-icon">📷</div>
-                <div class="upload-text">Foto ${index + 1}</div>
-                <input type="file" accept="image/*" style="display: none;" onchange="previewPhoto(this, ${index})">
-                <button type="button" class="remove-photo-btn" onclick="removePhoto(event, ${index})">×</button>
-            `;
-            slot.classList.remove('has-image');
-            slot.onclick = function() { selectPhoto(index); };
-            
-            uploadedPhotos[index] = null;
-        }
-
-        // ============================================
-        // ADDRESS SELECTION
-        // ============================================
-        function selectAddress(element, addressType) {
-            document.querySelectorAll('.address-card').forEach(card => {
-                card.classList.remove('selected');
-            });
-            element.classList.add('selected');
-            selectedAddress = addressType;
-            
-            document.getElementById('newAddressForm').style.display = 'none';
-        }
-
-        function toggleNewAddress() {
-            const form = document.getElementById('newAddressForm');
-            const display = form.style.display;
-            
-            if (display === 'none') {
-                form.style.display = 'block';
-                document.querySelectorAll('.address-card').forEach(card => {
-                    card.classList.remove('selected');
-                });
-                selectedAddress = 'new';
-            } else {
-                form.style.display = 'none';
-                selectedAddress = null;
-            }
-        }
-
-        // ============================================
-        // URGENCY SELECTION
-        // ============================================
-        function selectUrgency(element, urgency) {
-            document.querySelectorAll('.urgency-option').forEach(opt => {
-                opt.classList.remove('selected');
-            });
-            element.classList.add('selected');
-            document.getElementById('urgency').value = urgency;
-        }
-
-        // ============================================
-        // NAVIGATION LOGIC
-        // ============================================
-        function nextStep() {
-            if (currentStep < totalSteps) {
-                if (!validateStep(currentStep)) return;
-
-                currentStep++;
-                updateSteps();
-            } else if (currentStep === totalSteps) {
-                handleSubmit();
-            }
-        }
-
-        function previousStep() {
-            if (currentStep > 1) {
-                currentStep--;
-                updateSteps();
-            }
-        }
-
-        function updateSteps() {
-            document.querySelectorAll('.form-step').forEach((step, index) => {
-                step.classList.toggle('active', index + 1 === currentStep);
-            });
-
-            document.querySelectorAll('.step').forEach((step, index) => {
-                step.classList.toggle('active', index + 1 === currentStep);
-                step.classList.toggle('completed', index + 1 < currentStep);
-            });
-
-            updateProgress();
-
-            document.getElementById('prevBtn').style.display = currentStep > 1 ? 'inline-flex' : 'none';
-            document.getElementById('nextBtn').style.display = currentStep < totalSteps ? 'inline-flex' : 'none';
-            document.getElementById('submitBtn').style.display = currentStep === totalSteps ? 'inline-flex' : 'none';
-
-            if (currentStep === totalSteps) {
-                updateSummary();
-            }
-        }
-
-        function updateProgress() {
-            const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
-            document.getElementById('progressLine').style.width = `${progress}%`;
-        }
-
-        // ============================================
-        // VALIDATIONS
-        // ============================================
-        function validateStep(step) {
-            switch (step) {
-                case 1:
-                    const desc = document.getElementById('description').value.trim();
-                    const budget = document.getElementById('budget').value;
-                    if (desc.length < 20) {
-                        showAlert('La descripción debe tener al menos 20 caracteres', 'error');
-                        return false;
-                    }
-                    if (!budget || budget < 20) {
-                        showAlert('Debes ingresar un presupuesto válido (mínimo S/20)', 'error');
-                        return false;
-                    }
-                    break;
-
-                case 2:
-                    if (!selectedAddress && !document.getElementById('newAddress').value.trim()) {
-                        showAlert('Debes seleccionar o ingresar una dirección', 'error');
-                        return false;
-                    }
-                    break;
-
-                case 3:
-                    const date = document.getElementById('serviceDate').value;
-                    const time = document.getElementById('serviceTime').value;
-                    if (!date || !time) {
-                        showAlert('Debes seleccionar fecha y hora', 'error');
-                        return false;
-                    }
-                    break;
-            }
-            return true;
-        }
-
-        // ============================================
-        // SUMMARY
-        // ============================================
-        function updateSummary() {
-            const desc = document.getElementById('description').value.trim();
-            const budget = document.getElementById('budget').value;
-            const address = selectedAddress === 'new'
-                ? document.getElementById('newAddress').value
-                : selectedAddress === 'home' ? 'Casa (Av. Larco 1234, Miraflores)'
-                : 'Oficina (Jr. Las Begonias 567, San Isidro)';
-            const date = document.getElementById('serviceDate').value;
-            const time = document.getElementById('serviceTime').value;
-            const urgency = document.getElementById('urgency').value;
-            const notes = document.getElementById('additionalNotes').value.trim();
-
-            document.getElementById('summaryDescription').textContent = desc;
-            document.getElementById('summaryBudget').textContent = `S/ ${budget}`;
-            document.getElementById('summaryLocation').textContent = address;
-            document.getElementById('summaryDateTime').textContent = `${date} ${time}`;
-            document.getElementById('summaryUrgency').textContent = urgency === 'urgent' ? 'Urgente ⚡' : 'Normal 🕐';
-
-            const photosContainer = document.getElementById('summaryPhotosContainer');
-            const photosArea = document.getElementById('summaryPhotos');
-            photosArea.innerHTML = '';
-            const validPhotos = uploadedPhotos.filter(Boolean);
-
-            if (validPhotos.length > 0) {
-                photosContainer.style.display = 'flex';
-                validPhotos.forEach(src => {
-                    const img = document.createElement('img');
-                    img.src = src;
-                    img.classList.add('summary-photo-thumb');
-                    photosArea.appendChild(img);
-                });
-            } else {
-                photosContainer.style.display = 'none';
-            }
-
-            const notesContainer = document.getElementById('summaryNotesContainer');
-            if (notes) {
-                notesContainer.style.display = 'flex';
-                document.getElementById('summaryNotes').textContent = notes;
-            } else {
-                notesContainer.style.display = 'none';
-            }
-        }
-
-        // ============================================
-        // FORM SUBMISSION
-        // ============================================
-        async function handleSubmit(event) {
-            if (event) event.preventDefault();
-            const submitBtn = document.getElementById('submitBtn');
-            submitBtn.classList.add('loading');
-            submitBtn.disabled = true;
-
-            const solicitudData = {
-                profesionalId,
-                descripcion: document.getElementById('description').value.trim(),
-                presupuestoEstimado: parseFloat(document.getElementById('budget').value),
-                direccion: selectedAddress === 'new'
-                    ? document.getElementById('newAddress').value
-                    : selectedAddress,
-                distrito: document.getElementById('district').value || null,
-                codigoPostal: document.getElementById('zipCode').value || null,
-                referencia: document.getElementById('reference').value || null,
-                fechaServicio: `${document.getElementById('serviceDate').value}T${document.getElementById('serviceTime').value}:00`,
-                urgencia: document.getElementById('urgency').value,
-                notasAdicionales: document.getElementById('additionalNotes').value.trim(),
-                fotosUrls: uploadedPhotos.filter(Boolean),
-                estado: "pendiente"
-            };
-
-            const result = await solicitudService.crearSolicitud(solicitudData);
-
-            submitBtn.classList.remove('loading');
-            submitBtn.disabled = false;
-
-            if (result.success) {
-                currentStep = 5;
-                updateSteps();
-                document.getElementById('requestId').textContent = result.data.codigoSolicitud || 'SR-2024-000001';
-            } else {
-                showAlert(result.message, 'error');
-            }
-        }
-
-        // ============================================
-        // ALERT HANDLER
-        // ============================================
-        function showAlert(message, type = 'info') {
-            const alertContainer = document.getElementById('alertContainer');
-            alertContainer.innerHTML = `
-                <div class="alert alert-${type}">
-                    ${message}
-                </div>
-            `;
-            const alert = alertContainer.querySelector('.alert');
-            alert.style.display = 'block';
-            setTimeout(() => { alert.style.display = 'none'; }, 4000);
-        }
-
-        // ============================================
-        // REDIRECCIONES
-        // ============================================
-        function goToRequests() {
-            window.location.href = '/ContactoProfesionalesWeb/mis-solicitudes.html';
-        }
-
-        function goHome() {
-            window.location.href = '/ContactoProfesionalesWeb/dashboard.html';
-        }
+	<script>
+		// ============================================
+		// SERVICIO DE API
+		// ============================================
+		class SolicitudService {
+		    constructor() {
+		        this.baseURL = '/ContactoProfesionalesWeb/api';
+		    }
+		
+		    async crearSolicitud(solicitudData) {
+		        try {
+		            console.log('🌐 SolicitudService - Enviando petición a:', `${this.baseURL}/solicitudes`);
+		            console.log('📦 Datos:', solicitudData);
+		            
+		            const response = await fetch(`${this.baseURL}/solicitudes`, {
+		                method: 'POST',
+		                headers: {
+		                    'Content-Type': 'application/json',
+		                    'Authorization': `Bearer ${this.getToken()}`
+		                },
+		                body: JSON.stringify(solicitudData)
+		            });
+		
+		            console.log('📥 Response status:', response.status);
+		            
+		            const data = await response.json();
+		            console.log('📥 Response data:', data);
+		
+		            if (response.ok && data.success) {
+		                return { success: true, data: data.data };
+		            } else {
+		                return { success: false, message: data.error || data.message || 'Error al crear solicitud' };
+		            }
+		        } catch (error) {
+		            console.error('❌ Error en solicitud:', error);
+		            return { success: false, message: 'Error de conexión con el servidor' };
+		        }
+		    }
+		
+		    getToken() {
+		        const token = localStorage.getItem('authToken') || '';
+		        console.log('🔑 Token obtenido:', token ? 'Existe' : 'No existe');
+		        return token;
+		    }
+		}
+		
+		// Instancia global
+		const solicitudService = new SolicitudService();
+		
+		// ============================================
+		// VARIABLES GLOBALES
+		// ============================================
+		let currentStep = 1;
+		const totalSteps = 4;
+		let uploadedPhotos = [];
+		let selectedAddress = null;
+		let profesionalId = null;
+		
+		// ============================================
+		// INICIALIZACIÓN
+		// ============================================
+		document.addEventListener('DOMContentLoaded', function() {
+		    console.log('🚀 Iniciando solicitud-servicio.html');
+		    
+		    // Verificar sesión del usuario
+		    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+		    console.log('👤 Datos del usuario:', userData);
+		    
+		    if (!userData.id) {
+		        showAlert('Debes iniciar sesión para solicitar un servicio', 'error');
+		        setTimeout(() => {
+		            window.location.href = '/ContactoProfesionalesWeb/login.html';
+		        }, 2000);
+		        return;
+		    }
+		    
+		    // Obtener ID del profesional desde URL
+		    const urlParams = new URLSearchParams(window.location.search);
+		    profesionalId = urlParams.get('profesionalId');
+		    
+		    console.log('👨‍🔧 Profesional ID:', profesionalId);
+		
+		    if (!profesionalId) {
+		        showAlert('No se especificó el profesional', 'error');
+		        setTimeout(() => {
+		            window.location.href = '/ContactoProfesionalesWeb/buscar-profesional.html';
+		        }, 2000);
+		        return;
+		    }
+		
+		    // Cargar información del profesional
+		    cargarInfoProfesional(profesionalId);
+		
+		    // Set minimum date to today
+		    const today = new Date().toISOString().split('T')[0];
+		    document.getElementById('serviceDate').setAttribute('min', today);
+		
+		    // Character counters
+		    document.getElementById('description').addEventListener('input', function() {
+		        updateCharCounter('description', 'descCounter', 1000, 20);
+		    });
+		
+		    document.getElementById('additionalNotes').addEventListener('input', function() {
+		        updateCharCounter('additionalNotes', 'notesCounter', 500, 0);
+		    });
+		
+		    // ✅ EVENTO DE SUBMIT DEL FORMULARIO
+		    document.getElementById('serviceRequestForm').addEventListener('submit', function(e) {
+		        e.preventDefault();
+		        console.log('📤 Submit del formulario disparado');
+		        handleSubmit(e);
+		    });
+		    
+		    console.log('✅ Inicialización completada');
+		});
+		
+		// ============================================
+		// CARGAR INFO DEL PROFESIONAL
+		// ============================================
+		async function cargarInfoProfesional(id) {
+		    console.log('🔍 Cargando información del profesional ID:', id);
+		    
+		    try {
+		        document.getElementById('providerName').textContent = 'Cargando...';
+		        document.getElementById('providerRating').innerHTML = 'Obteniendo información...';
+		        
+		        const url = `./api/profesionales/${id}`;
+		        console.log('📡 URL:', url);
+		        
+		        const response = await fetch(url);
+		        console.log('📥 Response status:', response.status);
+		        
+		        const responseText = await response.text();
+		        console.log('📄 Response text:', responseText);
+		        
+		        let data;
+		        try {
+		            data = JSON.parse(responseText);
+		            console.log('📊 Data parseada:', data);
+		        } catch (parseError) {
+		            console.error('❌ Error al parsear JSON:', parseError);
+		            throw new Error('Respuesta del servidor inválida');
+		        }
+		        
+		        if (!response.ok) {
+		            throw new Error(data.error || `Error HTTP: ${response.status}`);
+		        }
+		        
+		        if (!data.success) {
+		            throw new Error(data.error || 'Error en la respuesta del servidor');
+		        }
+		        
+		        const profesionalData = data.data || data;
+		        if (!profesionalData.profesional) {
+		            throw new Error('No se recibieron datos del profesional');
+		        }
+		        const prof = profesionalData.profesional;
+		        console.log('✅ Profesional obtenido:', prof);
+		        
+		        const nombreCompleto = prof.nombreCompleto || 'Profesional';
+		        const especialidad = prof.especialidad || 'Sin especialidad';
+		        
+		        document.getElementById('providerName').textContent = 
+		            `${nombreCompleto} - ${especialidad}`;
+		        
+		        const calificacion = prof.calificacionPromedio || 0;
+		        const fullStars = Math.floor(calificacion);
+		        const emptyStars = 5 - fullStars;
+		        const stars = '⭐'.repeat(fullStars) + '☆'.repeat(emptyStars);
+		        
+		        const totalResenas = prof.totalResenas || 0;
+		        const distrito = prof.distrito || 'Lima';
+		        
+		        document.getElementById('providerRating').innerHTML = `
+		            <span>${stars}</span>
+		            <span>${calificacion.toFixed(1)} (${totalResenas} reseña${totalResenas !== 1 ? 's' : ''})</span>
+		            <span>•</span>
+		            <span>📍 ${distrito}</span>
+		        `;
+		        
+		        const avatarDiv = document.querySelector('.provider-avatar');
+		        if (prof.fotoPerfil && prof.fotoPerfil.trim() !== '') {
+		            avatarDiv.innerHTML = `
+		                <img src="${prof.fotoPerfil}" 
+		                     alt="${nombreCompleto}" 
+		                     style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;"
+		                     onerror="this.parentElement.innerHTML='👨‍🔧'">
+		            `;
+		        } else {
+		            avatarDiv.innerHTML = '👨‍🔧';
+		        }
+		        
+		        document.getElementById('summaryProvider').textContent = 
+		            `${nombreCompleto} - ${especialidad}`;
+		        
+		        window.profesionalData = prof;
+		        
+		        console.log('✅ Información del profesional cargada exitosamente');
+		        
+		    } catch (error) {
+		        console.error('❌ Error al cargar profesional:', error);
+		        showAlert(`No se pudo cargar la información del profesional. ${error.message}`, 'error');
+		        
+		        document.getElementById('providerName').textContent = 'Profesional';
+		        document.getElementById('providerRating').innerHTML = 
+		            '<span style="color: var(--error-color);">⚠️ Información no disponible</span>';
+		    }
+		}
+		
+		// ============================================
+		// NAVEGACIÓN
+		// ============================================
+		function volverBusqueda() {
+		    const descripcion = document.getElementById('description').value.trim();
+		    const budget = document.getElementById('budget').value;
+		    
+		    if (descripcion || budget) {
+		        const confirmar = confirm(
+		            '¿Estás seguro que deseas cambiar de profesional?\n\n' +
+		            'Se perderán los datos que has ingresado en el formulario.'
+		        );
+		        
+		        if (!confirmar) {
+		            return;
+		        }
+		    }
+		    
+		    window.location.href = 'buscar-profesional.html';
+		}
+		
+		function volverDashboard() {
+		    const descripcion = document.getElementById('description').value.trim();
+		    const budget = document.getElementById('budget').value;
+		    
+		    if (descripcion || budget) {
+		        const confirmar = confirm(
+		            '¿Estás seguro que deseas salir?\n\n' +
+		            'Se perderán los datos que has ingresado en el formulario.'
+		        );
+		        
+		        if (!confirmar) {
+		            return;
+		        }
+		    }
+		    
+		    window.location.href = 'dashboard.html';
+		}
+		
+		// ============================================
+		// CHARACTER COUNTER
+		// ============================================
+		function updateCharCounter(inputId, counterId, max, min = 0) {
+		    const input = document.getElementById(inputId);
+		    const counter = document.getElementById(counterId);
+		    const current = input.value.length;
+		    
+		    if (min > 0) {
+		        counter.textContent = `${current}/${max} caracteres (mínimo ${min})`;
+		    } else {
+		        counter.textContent = `${current}/${max} caracteres`;
+		    }
+		    
+		    if (current < min && current > 0) {
+		        counter.classList.add('error');
+		        counter.classList.remove('warning');
+		    } else if (current > max * 0.9) {
+		        counter.classList.add('warning');
+		        counter.classList.remove('error');
+		    } else {
+		        counter.classList.remove('warning', 'error');
+		    }
+		}
+		
+		// ============================================
+		// PHOTO UPLOAD
+		// ============================================
+		function selectPhoto(index) {
+		    const slot = document.querySelectorAll('.photo-slot')[index];
+		    const input = slot.querySelector('input[type="file"]');
+		    input.click();
+		}
+		
+		function previewPhoto(input, index) {
+		    const file = input.files[0];
+		    if (file) {
+		        if (file.size > 5 * 1024 * 1024) {
+		            showAlert('La foto no debe superar los 5MB', 'error');
+		            input.value = '';
+		            return;
+		        }
+		        
+		        if (!file.type.startsWith('image/')) {
+		            showAlert('El archivo debe ser una imagen', 'error');
+		            input.value = '';
+		            return;
+		        }
+		        
+		        const reader = new FileReader();
+		        reader.onload = function(e) {
+		            const slot = document.querySelectorAll('.photo-slot')[index];
+		            slot.innerHTML = `
+		                <img src="${e.target.result}" alt="Photo ${index + 1}">
+		                <button type="button" class="remove-photo-btn" onclick="removePhoto(event, ${index})">×</button>
+		            `;
+		            slot.classList.add('has-image');
+		            slot.onclick = null;
+		            
+		            uploadedPhotos[index] = e.target.result;
+		        };
+		        reader.readAsDataURL(file);
+		    }
+		}
+		
+		function removePhoto(event, index) {
+		    event.stopPropagation();
+		    const slot = document.querySelectorAll('.photo-slot')[index];
+		    slot.innerHTML = `
+		        <div class="upload-icon">📷</div>
+		        <div class="upload-text">Foto ${index + 1}</div>
+		        <input type="file" accept="image/*" style="display: none;" onchange="previewPhoto(this, ${index})">
+		        <button type="button" class="remove-photo-btn" onclick="removePhoto(event, ${index})">×</button>
+		    `;
+		    slot.classList.remove('has-image');
+		    slot.onclick = function() { selectPhoto(index); };
+		    
+		    uploadedPhotos[index] = null;
+		}
+		
+		// ============================================
+		// ADDRESS SELECTION
+		// ============================================
+		function selectAddress(element, addressType) {
+		    document.querySelectorAll('.address-card').forEach(card => {
+		        card.classList.remove('selected');
+		    });
+		    element.classList.add('selected');
+		    selectedAddress = addressType;
+		    
+		    document.getElementById('newAddressForm').style.display = 'none';
+		}
+		
+		function toggleNewAddress() {
+		    const form = document.getElementById('newAddressForm');
+		    const display = form.style.display;
+		    
+		    if (display === 'none') {
+		        form.style.display = 'block';
+		        document.querySelectorAll('.address-card').forEach(card => {
+		            card.classList.remove('selected');
+		        });
+		        selectedAddress = 'new';
+		    } else {
+		        form.style.display = 'none';
+		        selectedAddress = null;
+		    }
+		}
+		
+		// ============================================
+		// URGENCY SELECTION
+		// ============================================
+		function selectUrgency(element, urgency) {
+		    document.querySelectorAll('.urgency-option').forEach(opt => {
+		        opt.classList.remove('selected');
+		    });
+		    element.classList.add('selected');
+		    document.getElementById('urgency').value = urgency;
+		}
+		
+		// ============================================
+		// NAVIGATION LOGIC
+		// ============================================
+		function nextStep() {
+		    console.log('➡️ nextStep() - Paso actual:', currentStep);
+		    
+		    if (currentStep < totalSteps) {
+		        // Validar el paso actual antes de avanzar
+		        if (!validateStep(currentStep)) {
+		            console.log('❌ Validación falló para paso', currentStep);
+		            return;
+		        }
+		
+		        currentStep++;
+		        console.log('✅ Avanzando a paso', currentStep);
+		        updateSteps();
+		    }
+		    // ✅ NO hacer nada más aquí
+		    // El submit se maneja con el evento del formulario
+		}
+		
+		function previousStep() {
+		    console.log('⬅️ previousStep() - Paso actual:', currentStep);
+		    if (currentStep > 1) {
+		        currentStep--;
+		        updateSteps();
+		    }
+		}
+		
+		function updateSteps() {
+		    console.log('🔄 Actualizando UI a paso', currentStep);
+		    
+		    document.querySelectorAll('.form-step').forEach((step, index) => {
+		        step.classList.toggle('active', index + 1 === currentStep);
+		    });
+		
+		    document.querySelectorAll('.step').forEach((step, index) => {
+		        step.classList.toggle('active', index + 1 === currentStep);
+		        step.classList.toggle('completed', index + 1 < currentStep);
+		    });
+		
+		    updateProgress();
+		
+		    document.getElementById('prevBtn').style.display = currentStep > 1 ? 'inline-flex' : 'none';
+		    document.getElementById('nextBtn').style.display = currentStep < totalSteps ? 'inline-flex' : 'none';
+		    document.getElementById('submitBtn').style.display = currentStep === totalSteps ? 'inline-flex' : 'none';
+		
+		    if (currentStep === totalSteps) {
+		        updateSummary();
+		    }
+		}
+		
+		function updateProgress() {
+		    const progress = ((currentStep - 1) / (totalSteps - 1)) * 100;
+		    document.getElementById('progressLine').style.width = `${progress}%`;
+		}
+		
+		// ============================================
+		// VALIDATIONS
+		// ============================================
+		function validateStep(step) {
+		    console.log('🔍 Validando paso', step);
+		    
+		    switch (step) {
+		        case 1:
+		            const desc = document.getElementById('description').value.trim();
+		            const budget = document.getElementById('budget').value;
+		            if (desc.length < 20) {
+		                showAlert('La descripción debe tener al menos 20 caracteres', 'error');
+		                return false;
+		            }
+		            if (!budget || budget < 20) {
+		                showAlert('Debes ingresar un presupuesto válido (mínimo S/20)', 'error');
+		                return false;
+		            }
+		            break;
+		
+		        case 2:
+		            if (!selectedAddress && !document.getElementById('newAddress').value.trim()) {
+		                showAlert('Debes seleccionar o ingresar una dirección', 'error');
+		                return false;
+		            }
+		            break;
+		
+		        case 3:
+		            const date = document.getElementById('serviceDate').value;
+		            const time = document.getElementById('serviceTime').value;
+		            if (!date || !time) {
+		                showAlert('Debes seleccionar fecha y hora', 'error');
+		                return false;
+		            }
+		            // ✅ NO validar términos aquí, están en el paso 4
+		            break;
+		            
+		        case 4:
+		            // ✅ Validar términos en el paso 4 (Confirmar)
+		            const terms = document.getElementById('terms');
+		            if (!terms.checked) {
+		                showAlert('Debes aceptar los términos y condiciones', 'error');
+		                return false;
+		            }
+		            break;
+		    }
+		    
+		    console.log('✅ Validación exitosa para paso', step);
+		    return true;
+		}
+		
+		// ============================================
+		// SUMMARY
+		// ============================================
+		function updateSummary() {
+		    console.log('📋 Actualizando resumen');
+		    
+		    const desc = document.getElementById('description').value.trim();
+		    const budget = document.getElementById('budget').value;
+		    const address = selectedAddress === 'new'
+		        ? document.getElementById('newAddress').value
+		        : selectedAddress === 'home' ? 'Casa (Av. Larco 1234, Miraflores)'
+		        : 'Oficina (Jr. Las Begonias 567, San Isidro)';
+		    const date = document.getElementById('serviceDate').value;
+		    const time = document.getElementById('serviceTime').value;
+		    const urgency = document.getElementById('urgency').value;
+		    const notes = document.getElementById('additionalNotes').value.trim();
+		
+		    document.getElementById('summaryDescription').textContent = desc;
+		    document.getElementById('summaryBudget').textContent = `S/ ${budget}`;
+		    document.getElementById('summaryLocation').textContent = address;
+		    document.getElementById('summaryDateTime').textContent = `${date} ${time}`;
+		    document.getElementById('summaryUrgency').textContent = urgency === 'urgent' ? 'Urgente ⚡' : 'Normal 🕐';
+		
+		    const photosContainer = document.getElementById('summaryPhotosContainer');
+		    const photosArea = document.getElementById('summaryPhotos');
+		    photosArea.innerHTML = '';
+		    const validPhotos = uploadedPhotos.filter(Boolean);
+		
+		    if (validPhotos.length > 0) {
+		        photosContainer.style.display = 'flex';
+		        validPhotos.forEach(src => {
+		            const img = document.createElement('img');
+		            img.src = src;
+		            img.classList.add('summary-photo-thumb');
+		            photosArea.appendChild(img);
+		        });
+		    } else {
+		        photosContainer.style.display = 'none';
+		    }
+		
+		    const notesContainer = document.getElementById('summaryNotesContainer');
+		    if (notes) {
+		        notesContainer.style.display = 'flex';
+		        document.getElementById('summaryNotes').textContent = notes;
+		    } else {
+		        notesContainer.style.display = 'none';
+		    }
+		}
+		
+		// ============================================
+		// FORM SUBMISSION (USANDO SolicitudService)
+		// ============================================
+		async function handleSubmit(event) {
+		    if (event) {
+		        event.preventDefault();
+		    }
+		    
+		    console.log('🚀 handleSubmit() ejecutándose...');
+		    
+		    // ✅ Obtener datos del usuario desde localStorage
+		    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+		    console.log('👤 Datos del usuario:', userData);
+		    
+		    // ✅ Verificar que existe clienteId
+		    if (!userData.id) {
+		        console.error('❌ No hay usuario ID en localStorage');
+		        showAlert('Sesión expirada. Por favor inicia sesión nuevamente.', 'error');
+		        setTimeout(() => {
+		            window.location.href = '/ContactoProfesionalesWeb/login.html';
+		        }, 2000);
+		        return;
+		    }
+		    
+		    console.log('✅ Cliente ID encontrado:', userData.id);
+		    
+		    const submitBtn = document.getElementById('submitBtn');
+		    const btnText = submitBtn.querySelector('.button-text');
+		    const originalText = btnText.textContent;
+		    
+		    submitBtn.classList.add('loading');
+		    submitBtn.disabled = true;
+		    btnText.textContent = 'Enviando...';
+		
+		    // ✅ Construir objeto con clienteId incluido
+		    const solicitudData = {
+		        clienteId: userData.id,  // ✅ ID del cliente
+		        profesionalId: parseInt(profesionalId),
+		        descripcion: document.getElementById('description').value.trim(),
+		        presupuestoEstimado: parseFloat(document.getElementById('budget').value),
+		        direccion: selectedAddress === 'new'
+		            ? document.getElementById('newAddress').value
+		            : selectedAddress,
+		        distrito: document.getElementById('district').value || null,
+		        codigoPostal: document.getElementById('zipCode').value || null,
+		        referencia: document.getElementById('reference').value || null,
+		        fechaServicio: `${document.getElementById('serviceDate').value}T${document.getElementById('serviceTime').value}:00`,
+		        urgencia: document.getElementById('urgency').value,
+		        notasAdicionales: document.getElementById('additionalNotes').value.trim(),
+		        fotosBase64: uploadedPhotos.filter(Boolean),
+		        estado: "pendiente"
+		    };
+		    
+		    console.log('📤 Datos a enviar:', solicitudData);
+		
+		    // ✅ USAR EL SERVICIO
+		    const result = await solicitudService.crearSolicitud(solicitudData);
+		
+		    submitBtn.classList.remove('loading');
+		    submitBtn.disabled = false;
+		    btnText.textContent = originalText;
+		
+		    if (result.success) {
+		        console.log('✅ Solicitud enviada exitosamente');
+		        
+		        // Mostrar pantalla de éxito
+		        currentStep = 5;
+		        updateSteps();
+		        document.getElementById('requestId').textContent = 
+		            result.data.codigoSolicitud || 'SR-2025-000001';
+		        
+		        // Ocultar navegación
+		        document.getElementById('formNavigation').style.display = 'none';
+		    } else {
+		        console.error('❌ Error:', result.message);
+		        showAlert(result.message, 'error');
+		    }
+		}
+		
+		// ============================================
+		// ALERT HANDLER
+		// ============================================
+		function showAlert(message, type = 'info') {
+		    console.log(`📢 Alert [${type}]:`, message);
+		    
+		    const alertContainer = document.getElementById('alertContainer');
+		    alertContainer.innerHTML = `
+		        <div class="alert alert-${type}">
+		            ${message}
+		        </div>
+		    `;
+		    const alert = alertContainer.querySelector('.alert');
+		    alert.style.display = 'block';
+		    
+		    // Scroll to top para ver el alert
+		    window.scrollTo({ top: 0, behavior: 'smooth' });
+		    
+		    setTimeout(() => { 
+		        alert.style.display = 'none'; 
+		    }, 5000);
+		}
+		
+		// ============================================
+		// REDIRECCIONES
+		// ============================================
+		function goToRequests() {
+		    window.location.href = '/ContactoProfesionalesWeb/mis-solicitudes.html';
+		}
+		
+		function goHome() {
+		    window.location.href = '/ContactoProfesionalesWeb/dashboard.html';
+		}
+		
+		console.log('✅ Script cargado completamente');
     </script>
 </body>
 </html>

@@ -63,24 +63,41 @@ public class SolicitudServicioServlet extends HttpServlet {
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
         
-        long startTime = System.currentTimeMillis();
+    	long startTime = System.currentTimeMillis();
         logger.info("POST /api/solicitudes - Nueva solicitud de servicio");
         
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
         
         try {
-            // Verificar autenticación
-            Integer clienteId = obtenerUsuarioId(request);
+            // ✅ PASO 1: PRIMERO parsear el request para obtener los datos del body
+            SolicitudServicioRequest solicitudRequest = parseRequest(request);
+            
+            logger.info("📦 Request parseado correctamente");
+            logger.info("📦 Datos recibidos: {}", gson.toJson(solicitudRequest));
+            
+            // ✅ PASO 2: Obtener clienteId DEL BODY (no de la sesión)
+            Integer clienteId = solicitudRequest.getClienteId();
+            
+            logger.info("👤 Cliente ID del body: {}", clienteId);
+            
+            // Si no viene en el body, intentar obtener de sesión (fallback)
             if (clienteId == null) {
+                logger.warn("⚠️ clienteId no viene en el body, intentando obtener de sesión...");
+                clienteId = obtenerUsuarioId(request);
+                logger.info("👤 Cliente ID de sesión: {}", clienteId);
+            }
+            
+            // ✅ PASO 3: Validar que existe clienteId
+            if (clienteId == null) {
+                logger.error("❌ No se pudo obtener clienteId (ni del body ni de la sesión)");
                 sendUnauthorized(response, "Usuario no autenticado");
                 return;
             }
             
-            // Parsear request
-            SolicitudServicioRequest solicitudRequest = parseRequest(request);
+            logger.info("✅ Cliente ID validado: {}", clienteId);
             
-            // Crear solicitud
+            // ✅ PASO 4: Crear solicitud
             SolicitudServicio solicitud = solicitudService.crearSolicitud(clienteId, solicitudRequest);
             
             // Preparar respuesta
@@ -96,7 +113,7 @@ public class SolicitudServicioServlet extends HttpServlet {
             );
             
             long duration = System.currentTimeMillis() - startTime;
-            logger.info("✓ Solicitud creada con ID: {} - Tiempo: {}ms", 
+            logger.info("✅ Solicitud creada con ID: {} - Tiempo: {}ms", 
                        solicitud.getId(), duration);
             
             response.setStatus(HttpServletResponse.SC_CREATED);

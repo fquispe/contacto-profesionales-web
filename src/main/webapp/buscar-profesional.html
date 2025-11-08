@@ -524,6 +524,58 @@
             color: #0c5460;
             border: 1px solid #bee5eb;
         }
+        
+        /* Botón de solicitar servicio en las tarjetas */
+		.btn-solicitar {
+		    width: 100%;
+		    padding: 12px 20px;
+		    margin-top: 15px;
+		    background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+		    color: white;
+		    border: none;
+		    border-radius: 8px;
+		    cursor: pointer;
+		    font-size: 14px;
+		    font-weight: 600;
+		    transition: all 0.3s ease;
+		    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+		}
+		
+		.btn-solicitar:hover {
+		    transform: translateY(-2px);
+		    box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
+		}
+		
+		.btn-solicitar:active {
+		    transform: translateY(0);
+		}
+		
+		/* Botón de volver al dashboard */
+		.btn-back {
+		    padding: 10px 20px;
+		    background: white;
+		    color: var(--primary-color);
+		    border: 2px solid var(--primary-color);
+		    border-radius: 8px;
+		    cursor: pointer;
+		    font-size: 14px;
+		    font-weight: 600;
+		    transition: all 0.3s ease;
+		    display: flex;
+		    align-items: center;
+		    gap: 8px;
+		}
+		
+		.btn-back:hover {
+		    background: var(--primary-color);
+		    color: white;
+		    transform: translateX(-3px);
+		    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+		}
+		
+		.btn-back:active {
+		    transform: translateX(0);
+		}
 
         /* Responsive Design */
         @media (max-width: 1200px) {
@@ -560,10 +612,18 @@
 <body>
     <div class="container">
         <!-- Header -->
-        <div class="header">
-            <h1>🔍 Búsqueda de Profesionales</h1>
-            <p>Encuentra al profesional ideal para tu proyecto</p>
-        </div>
+		<div class="header">
+		    <div style="display: flex; justify-content: space-between; align-items: center;">
+		        <button class="btn-back" onclick="volverDashboard()">
+		            ← Volver al Dashboard
+		        </button>
+		        <div style="text-align: center; flex: 1;">
+		            <h1>🔍 Búsqueda de Profesionales</h1>
+		            <p>Encuentra al profesional ideal para tu proyecto</p>
+		        </div>
+		        <div style="width: 180px;"></div> <!-- Espaciador para centrar -->
+		    </div>
+		</div>
 
         <!-- Search Section -->
         <div class="search-section">
@@ -752,6 +812,11 @@
 	        }
 	    }
 	
+	 	// Función para volver al dashboard
+	    function volverDashboard() {
+	        window.location.href = 'dashboard.html';
+	    }
+	    
 	    // Initialize rating filter
 	    function initializeRatingFilter() {
 	        const stars = document.querySelectorAll('.star');
@@ -967,6 +1032,10 @@
                         ${prof.tarifaHora ? `S/ ${prof.tarifaHora.toFixed(2)}/h` : 'A consultar'}
                     </div>
                 </div>
+                
+                <button class="btn-solicitar" onclick="solicitarServicio(event, ${prof.id})">
+                	📝 Solicitar Servicio
+            	</button>
             `;
             
             return card;
@@ -1062,9 +1131,30 @@
 
         // View professional profile
         function viewProfile(id) {
-            window.location.href = `/perfil-profesional.html?id=${id}`;
+            //window.location.href = `/perfil-profesional.html?id=${id}`;
+        	window.location.href = `solicitud-servicio.html?profesionalId=${id}`;
         }
-
+		
+     	// Nueva función para solicitar servicio
+        function solicitarServicio(event, profesionalId) {
+            // Evitar que se dispare el onclick de la tarjeta
+            event.stopPropagation();
+            
+            // Verificar si el usuario está autenticado
+            const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+            
+            if (!userData.id) {
+                showAlert('Debes iniciar sesión para solicitar un servicio', 'error');
+                setTimeout(() => {
+                    window.location.href = 'login.html';
+                }, 2000);
+                return;
+            }
+            
+            // Redirigir a la página de solicitud con el ID del profesional
+            window.location.href = `solicitud-servicio.html?profesionalId=${profesionalId}`;
+        }
+        
         // Reset filters
         function resetFilters() {
             document.getElementById('searchForm').reset();

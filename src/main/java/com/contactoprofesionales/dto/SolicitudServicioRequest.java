@@ -7,7 +7,8 @@ import java.util.List;
  * DTO para crear una solicitud de servicio.
  */
 public class SolicitudServicioRequest {
-    private Integer profesionalId;
+	private Integer clienteId;
+	private Integer profesionalId;
     private String descripcion;
     private Double presupuestoEstimado;
     private String direccion;
@@ -21,6 +22,15 @@ public class SolicitudServicioRequest {
     private List<String> fotosBase64;
 
     // Getters y Setters
+    
+    public Integer getClienteId() {
+        return clienteId;
+    }
+    
+    public void setClienteId(Integer clienteId) {
+        this.clienteId = clienteId;
+    }
+    
     public Integer getProfesionalId() {
         return profesionalId;
     }

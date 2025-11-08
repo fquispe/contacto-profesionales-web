@@ -31,9 +31,9 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
      */
     private Connection getConnection() throws SQLException {
         // 🔧 Adaptar con tu configuración real
-        String url = "jdbc:postgresql://localhost:5432/contactoprofesionales";
+        String url = "jdbc:postgresql://localhost:5432/plataforma_servicios";
         String user = "postgres";
-        String pass = "admin";
+        String pass = "Admin123";
         return DriverManager.getConnection(url, user, pass);
     }
 
@@ -67,7 +67,14 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
             ps.setTimestamp(9, Timestamp.valueOf(solicitud.getFechaServicio()));
             ps.setString(10, solicitud.getUrgencia());
             ps.setString(11, solicitud.getNotasAdicionales());
-            ps.setString(12, convertirListaAString(solicitud.getFotosUrls()));
+            
+            // ✅ CAMBIO AQUÍ: Convertir List<String> a Array de PostgreSQL
+            Array fotosArray = null;
+            if (solicitud.getFotosUrls() != null && !solicitud.getFotosUrls().isEmpty()) {
+                fotosArray = conn.createArrayOf("text", solicitud.getFotosUrls().toArray());
+            }
+            ps.setArray(12, fotosArray);
+            
             ps.setString(13, solicitud.getEstado());
             ps.setTimestamp(14, Timestamp.valueOf(solicitud.getFechaSolicitud()));
             ps.setTimestamp(15, Timestamp.valueOf(LocalDateTime.now()));
@@ -269,7 +276,16 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
 
         s.setUrgencia(rs.getString("urgencia"));
         s.setNotasAdicionales(rs.getString("notas_adicionales"));
-        s.setFotosUrls(convertirStringALista(rs.getString("fotos_urls")));
+        
+        // ✅ CAMBIO AQUÍ: Leer array de PostgreSQL
+        Array fotosArray = rs.getArray("fotos_urls");
+        if (fotosArray != null) {
+            String[] fotosArrayStr = (String[]) fotosArray.getArray();
+            s.setFotosUrls(Arrays.asList(fotosArrayStr));
+        } else {
+            s.setFotosUrls(new ArrayList<>());
+        }
+        
         s.setEstado(rs.getString("estado"));
 
         Timestamp fechaSol = rs.getTimestamp("fecha_solicitud");
@@ -284,20 +300,5 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
         s.setActivo(rs.getBoolean("activo"));
         return s;
     }
-
-    /**
-     * Convierte una lista de URLs en un string separado por comas.
-     */
-    private String convertirListaAString(List<String> lista) {
-        if (lista == null || lista.isEmpty()) return null;
-        return String.join(",", lista);
-    }
-
-    /**
-     * Convierte un string separado por comas en una lista de URLs.
-     */
-    private List<String> convertirStringALista(String cadena) {
-        if (cadena == null || cadena.trim().isEmpty()) return new ArrayList<>();
-        return Arrays.asList(cadena.split(","));
-    }
+    
 }

@@ -44,6 +44,8 @@ public class SolicitudServicioService {
         // Validar datos
         validarSolicitud(request);
         
+        logger.info("Solicitud de servicio para cliente Validada: {}", clienteId);
+        
         // Verificar si ya existe una solicitud pendiente
         if (solicitudDAO.existeSolicitudPendiente(clienteId, request.getProfesionalId())) {
             throw new ValidationException(
@@ -63,11 +65,14 @@ public class SolicitudServicioService {
         solicitud.setCodigoPostal(request.getCodigoPostal());
         solicitud.setReferencia(request.getReferencia());
         
-        // Parsear fecha y hora
-        LocalDateTime fechaServicio = parseFechaHora(
-            request.getFechaServicio(), 
-            request.getHoraServicio()
-        );
+        logger.info("Creando objeto de solicitud de servicio para cliente: {}", clienteId);
+        
+        // ✅ Parsear fecha y hora desde ISO DateTime string
+        LocalDateTime fechaServicio = LocalDateTime.parse(request.getFechaServicio());
+        solicitud.setFechaServicio(fechaServicio);
+
+        logger.info("✅ Fecha servicio parseada: {}", fechaServicio);
+                
         solicitud.setFechaServicio(fechaServicio);
         
         solicitud.setUrgencia(request.getUrgencia() != null ? request.getUrgencia() : "normal");
@@ -197,6 +202,27 @@ public class SolicitudServicioService {
             errores.add("El distrito es requerido");
         }
         
+        
+        // Validar fecha y hora
+        if (request.getFechaServicio() == null || request.getFechaServicio().trim().isEmpty()) {
+            errores.add("La fecha del servicio es requerida");
+        } else {
+            try {
+                LocalDateTime fechaHora = LocalDateTime.parse(request.getFechaServicio());
+                
+                // Validar que no sea en el pasado
+                if (fechaHora.isBefore(LocalDateTime.now())) {
+                    errores.add("La fecha y hora del servicio no pueden ser anteriores al momento actual");
+                }
+                
+                logger.info("✅ Fecha y hora validadas: {}", fechaHora);
+            } catch (Exception e) {
+                logger.error("❌ Error al parsear fecha/hora: {}", request.getFechaServicio(), e);
+                errores.add("Formato de fecha/hora inválido (debe ser YYYY-MM-DDTHH:mm:ss)");
+            }
+        }
+        
+        /*
         // Validar fecha
         if (request.getFechaServicio() == null || request.getFechaServicio().trim().isEmpty()) {
             errores.add("La fecha del servicio es requerida");
@@ -222,6 +248,8 @@ public class SolicitudServicioService {
             }
         }
         
+        */
+        
         // Validar urgencia
         if (request.getUrgencia() != null && 
             !request.getUrgencia().equals("normal") && 
@@ -239,15 +267,7 @@ public class SolicitudServicioService {
         }
     }
     
-    /**
-     * Parsea fecha y hora a LocalDateTime.
-     */
-    private LocalDateTime parseFechaHora(String fecha, String hora) {
-        LocalDate localDate = LocalDate.parse(fecha);
-        LocalTime localTime = LocalTime.parse(hora);
-        return LocalDateTime.of(localDate, localTime);
-    }
-    
+   
     /**
      * Procesa fotos en base64 y retorna URLs.
      * En un caso real, guardaría en S3/Azure Blob/filesystem y retornaría URLs reales.

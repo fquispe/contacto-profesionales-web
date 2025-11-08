@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RF-005: Gestión de Perfil de Cliente - ServiciosPro</title>
+    <link rel="stylesheet" href="assets/css/perfil_cliente.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Gestión de Perfil de Cliente</h1>
+            <p>RF-005: Configure su información personal, direcciones y preferencias</p>
+        </div>
+
+        <!-- Alerta Container -->
+        <div id="alertContainer"></div>
+
+        <div class="form-content">
+            <!-- Tabs de navegación -->
+            <div class="form-tabs">
+                <button class="tab-button active" onclick="switchTab('personal')">
+                    👤 Información Personal
+                </button>
+                <button class="tab-button" onclick="switchTab('direcciones')">
+                    📍 Direcciones
+                </button>
+                <button class="tab-button" onclick="switchTab('preferencias')">
+                    ⚙️ Preferencias
+                </button>
+                <button class="tab-button" onclick="switchTab('notificaciones')">
+                    🔔 Notificaciones
+                </button>
+                <button class="tab-button" onclick="switchTab('privacidad')">
+                    🔒 Privacidad
+                </button>
+            </div>
+
+            <form id="clientProfileForm" enctype="multipart/form-data">
+                <!-- Hidden field para ID del cliente (usado en actualización) -->
+                <input type="hidden" id="clienteId" name="clienteId">
+
+                <!-- TAB 1: Información Personal -->
+                <div id="tab-personal" class="tab-content active">
+                    <div class="form-section">
+                        <h3 class="section-title">📝 Datos Personales</h3>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Foto de Perfil</label>
+                            <div class="photo-upload">
+                                <div class="photo-preview" id="photoPreview">
+                                    <span style="color: #999; font-size: 32px;">👤</span>
+                                </div>
+                                <div>
+                                    <input type="file" id="photoInput" accept="image/*" style="display: none;">
+                                    <button type="button" class="photo-upload-btn" onclick="document.getElementById('photoInput').click()">
+                                        📷 Subir Foto
+                                    </button>
+                                    <p style="color: #6c757d; font-size: 12px; margin-top: 5px;">
+                                        JPG, PNG o GIF - Máximo 5MB
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-row two-cols">
+                            <div class="form-group">
+                                <label class="form-label">Nombre Completo *</label>
+                                <input type="text" class="form-input" id="nombreCompleto" name="nombreCompleto" 
+                                       placeholder="Ej: Juan Pérez García" required minlength="3" maxlength="100">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Teléfono *</label>
+                                <input type="tel" class="form-input" id="phone" name="telefono" 
+                                       placeholder="987654321" required pattern="[0-9]{9}">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Correo Electrónico *</label>
+                            <input type="email" class="form-input" id="email" name="email" 
+                                   placeholder="ejemplo@correo.com" required>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 2: Direcciones -->
+                <div id="tab-direcciones" class="tab-content">
+                    <div class="form-section">
+                        <h3 class="section-title">🏠 Direcciones Guardadas</h3>
+                        <p style="color: #6c757d; margin-bottom: 20px;">
+                            Puede registrar hasta 3 direcciones diferentes para sus servicios
+                        </p>
+
+                        <button type="button" id="addAddressBtn" class="btn-add" onclick="addAddress()">
+                            ➕ Agregar Nueva Dirección
+                        </button>
+
+                        <div id="addressesContainer">
+                            <!-- Dirección Principal (por defecto) -->
+                            <div class="address-item">
+                                <div class="address-type">🏠 Casa</div>
+                                <div class="form-row two-cols" style="margin-top: 15px;">
+                                    <div class="form-group">
+                                        <label class="form-label">Dirección Completa *</label>
+                                        <input type="text" class="form-input" name="direccion[]" 
+                                               placeholder="Av. Principal 123, Departamento 4B" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Distrito *</label>
+                                        <select class="form-input" name="distrito[]" required>
+                                            <option value="">Seleccionar distrito</option>
+                                            <option value="miraflores">Miraflores</option>
+                                            <option value="san_isidro">San Isidro</option>
+                                            <option value="surco">Santiago de Surco</option>
+                                            <option value="la_molina">La Molina</option>
+                                            <option value="san_borja">San Borja</option>
+                                            <option value="surquillo">Surquillo</option>
+                                            <option value="barranco">Barranco</option>
+                                            <option value="chorrillos">Chorrillos</option>
+                                            <option value="lince">Lince</option>
+                                            <option value="jesus_maria">Jesús María</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Referencias</label>
+                                    <input type="text" class="form-input" name="referencia[]" 
+                                           placeholder="Cerca del parque, frente a la farmacia">
+                                </div>
+                                <input type="hidden" name="tipo[]" value="PRINCIPAL">
+                                <input type="hidden" name="esPrincipal[]" value="true">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: Preferencias de Búsqueda -->
+                <div id="tab-preferencias" class="tab-content">
+                    <div class="form-section">
+                        <h3 class="section-title">🔍 Preferencias de Búsqueda</h3>
+
+                        <div class="form-group">
+                            <label class="form-label">Categorías Favoritas</label>
+                            <div class="category-grid">
+                                <label class="category-item">
+                                    <input type="checkbox" name="categoria" value="plomeria">
+                                    <span>🔧 Plomería</span>
+                                </label>
+                                <label class="category-item">
+                                    <input type="checkbox" name="categoria" value="electricidad">
+                                    <span>⚡ Electricidad</span>
+                                </label>
+                                <label class="category-item">
+                                    <input type="checkbox" name="categoria" value="limpieza">
+                                    <span>🧹 Limpieza</span>
+                                </label>
+                                <label class="category-item">
+                                    <input type="checkbox" name="categoria" value="jardineria">
+                                    <span>🌿 Jardinería</span>
+                                </label>
+                                <label class="category-item">
+                                    <input type="checkbox" name="categoria" value="pintura">
+                                    <span>🎨 Pintura</span>
+                                </label>
+                                <label class="category-item">
+                                    <input type="checkbox" name="categoria" value="carpinteria">
+                                    <span>🪚 Carpintería</span>
+                                </label>
+                                <label class="category-item">
+                                    <input type="checkbox" name="categoria" value="cerrajeria">
+                                    <span>🔑 Cerrajería</span>
+                                </label>
+                                <label class="category-item">
+                                    <input type="checkbox" name="categoria" value="gasfiteria">
+                                    <span>🚿 Gasfitería</span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">
+                                Radio de Búsqueda: <span id="rangeValue">10 km</span>
+                            </label>
+                            <input type="range" class="range-slider" id="searchRadius" name="radioBusqueda"
+                                   min="1" max="50" value="10" oninput="updateRangeValue(this)">
+                            <div style="display: flex; justify-content: space-between; font-size: 12px; color: #6c757d;">
+                                <span>1 km</span>
+                                <span>50 km</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Presupuesto Promedio por Servicio (S/.)</label>
+                            <input type="number" class="form-input" id="presupuestoPromedio" name="presupuestoPromedio"
+                                   placeholder="150.00" min="0" step="0.01">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: Notificaciones -->
+                <div id="tab-notificaciones" class="tab-content">
+                    <div class="form-section">
+                        <h3 class="section-title">🔔 Preferencias de Notificaciones</h3>
+
+                        <div class="notification-item">
+                            <div class="notification-info">
+                                <strong>📧 Notificaciones por Email</strong>
+                                <p>Reciba actualizaciones y confirmaciones por correo electrónico</p>
+                            </div>
+                            <div class="toggle-switch" id="emailNotifications" onclick="toggleSwitch(this)">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="notification-item">
+                            <div class="notification-info">
+                                <strong>📱 Notificaciones Push</strong>
+                                <p>Alertas instantáneas en su dispositivo</p>
+                            </div>
+                            <div class="toggle-switch" id="pushNotifications" onclick="toggleSwitch(this)">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="notification-item">
+                            <div class="notification-info">
+                                <strong>🎁 Promociones y Ofertas</strong>
+                                <p>Reciba descuentos exclusivos y promociones especiales</p>
+                            </div>
+                            <div class="toggle-switch" id="promotionNotifications" onclick="toggleSwitch(this)">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="notification-item">
+                            <div class="notification-info">
+                                <strong>⭐ Solicitudes de Reseñas</strong>
+                                <p>Le pediremos que califique los servicios recibidos</p>
+                            </div>
+                            <div class="toggle-switch" id="reviewNotifications" onclick="toggleSwitch(this)">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 5: Privacidad -->
+                <div id="tab-privacidad" class="tab-content">
+                    <div class="form-section">
+                        <h3 class="section-title">🔒 Configuración de Privacidad</h3>
+
+                        <div class="privacy-item">
+                            <div class="privacy-info">
+                                <strong>👁️ Perfil Visible</strong>
+                                <p>Permitir que los profesionales vean su perfil básico</p>
+                            </div>
+                            <div class="toggle-switch active" id="profileVisible" onclick="toggleSwitch(this)">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="privacy-item">
+                            <div class="privacy-info">
+                                <strong>📍 Compartir Ubicación</strong>
+                                <p>Mostrar su ubicación aproximada a profesionales cercanos</p>
+                            </div>
+                            <div class="toggle-switch" id="shareLocation" onclick="toggleSwitch(this)">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="privacy-item">
+                            <div class="privacy-info">
+                                <strong>📊 Historial Público</strong>
+                                <p>Permitir que otros vean sus reseñas y calificaciones</p>
+                            </div>
+                            <div class="toggle-switch" id="publicHistory" onclick="toggleSwitch(this)">
+                                <div class="toggle-slider"></div>
+                            </div>
+                        </div>
+
+                        <div class="info-box" style="margin-top: 30px;">
+                            <h4>🛡️ Su privacidad es importante</h4>
+                            <p>
+                                Sus datos personales están protegidos y solo se comparten con profesionales 
+                                cuando usted solicita un servicio. Puede modificar estas configuraciones en cualquier momento.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Botones de Acción -->
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" onclick="cancelForm()">
+                        ✕ Cancelar
+                    </button>
+                    <button type="button" class="btn-secondary" onclick="exportData()">
+                        📥 Exportar Datos
+                    </button>
+                    <button type="submit" class="btn-primary">
+                        💾 Guardar Configuración
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Footer con información adicional -->
+        <div class="footer-info">
+            <p>
+                <strong>Nota:</strong> Todos los campos marcados con (*) son obligatorios. 
+                Su información está protegida y encriptada según estándares de seguridad.
+            </p>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="assets/js/Cliente-api.js"></script>
+    <script src="assets/js/Perfil-cliente.js"></script>
+</body>
+</html>

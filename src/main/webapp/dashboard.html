@@ -180,8 +180,8 @@
     <div class="logo">ServiciosProfesionales</div>
     <nav class="menu">
       <div class="menu-item active" onclick="showSection('home')">🏠 <span>Inicio</span></div>
-      <div class="menu-item" onclick="showSection('personal')">👤 <span>Actualizar Información</span></div>
-      <div class="menu-item" onclick="goToService()">📝 <span>Solitud de Servicio</span></div>
+      <div class="menu-item" onclick="goToActualizarInformacion()">👤 <span>Actualizar Información</span></div>
+      <div class="menu-item" onclick="goToBuscarProfesional()">📝 <span>Solitud de Servicio</span></div>
 	  <div class="menu-item" onclick="goToProfesional()">👤 <span>Información Profesional</span></div>
 	  <div class="menu-item" onclick="goToBuscarProfesional()">👤 <span>Buscar Profesional</span></div>
       <div class="menu-item" onclick="showSection('stats')">📊 <span>Estadísticas</span></div>
@@ -262,6 +262,12 @@
     function logout() {
       localStorage.clear();
       window.location.href = "login.html";
+    }
+    
+    function goToActualizarInformacion(){
+
+    	window.location.href = "perfil-cliente.html";
+    
     }
 
     // Solicitud de Servicio
