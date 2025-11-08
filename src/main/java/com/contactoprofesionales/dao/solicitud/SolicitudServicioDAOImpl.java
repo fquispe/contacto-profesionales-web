@@ -2,6 +2,7 @@ package com.contactoprofesionales.dao.solicitud;
 
 import com.contactoprofesionales.model.SolicitudServicio;
 import com.contactoprofesionales.exception.DatabaseException;
+import com.contactoprofesionales.util.DatabaseConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,18 +27,6 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
     public SolicitudServicioDAOImpl() {}
 
     /**
-     * Obtiene una conexión desde el pool o DriverManager.
-     * En una implementación productiva, se usará un DataSource.
-     */
-    private Connection getConnection() throws SQLException {
-        // 🔧 Adaptar con tu configuración real
-        String url = "jdbc:postgresql://localhost:5432/plataforma_servicios";
-        String user = "postgres";
-        String pass = "Admin123";
-        return DriverManager.getConnection(url, user, pass);
-    }
-
-    /**
      * Crea una nueva solicitud en BD.
      */
     @Override
@@ -53,7 +42,7 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
             RETURNING id
         """;
 
-        try (Connection conn = getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, solicitud.getClienteId());
@@ -100,7 +89,7 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
     @Override
     public SolicitudServicio buscarPorId(Integer id) throws DatabaseException {
         String sql = "SELECT * FROM solicitudes_servicio WHERE id = ? AND activo = true";
-        try (Connection conn = getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, id);
@@ -126,7 +115,7 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
             SELECT COUNT(*) FROM solicitudes_servicio
             WHERE cliente_id = ? AND profesional_id = ? AND estado = 'pendiente' AND activo = true
         """;
-        try (Connection conn = getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, clienteId);
@@ -150,12 +139,12 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
     @Override
     public List<SolicitudServicio> listarPorCliente(Integer clienteId) throws DatabaseException {
         String sql = """
-            SELECT * FROM solicitudes_servicio 
+            SELECT * FROM solicitudes_servicio
             WHERE cliente_id = ? AND activo = true ORDER BY fecha_solicitud DESC
         """;
         List<SolicitudServicio> solicitudes = new ArrayList<>();
 
-        try (Connection conn = getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, clienteId);
@@ -178,12 +167,12 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
     @Override
     public List<SolicitudServicio> listarPorProfesional(Integer profesionalId) throws DatabaseException {
         String sql = """
-            SELECT * FROM solicitudes_servicio 
+            SELECT * FROM solicitudes_servicio
             WHERE profesional_id = ? AND activo = true ORDER BY fecha_solicitud DESC
         """;
         List<SolicitudServicio> solicitudes = new ArrayList<>();
 
-        try (Connection conn = getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setInt(1, profesionalId);
@@ -211,7 +200,7 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
             WHERE id = ? AND cliente_id = ? AND activo = true
         """;
 
-        try (Connection conn = getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setTimestamp(1, Timestamp.valueOf(LocalDateTime.now()));
@@ -239,7 +228,7 @@ public class SolicitudServicioDAOImpl implements SolicitudServicioDAO {
             WHERE id = ? AND activo = true
         """;
 
-        try (Connection conn = getConnection();
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
 
             ps.setString(1, nuevoEstado);
