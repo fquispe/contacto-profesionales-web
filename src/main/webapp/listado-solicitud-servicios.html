@@ -746,7 +746,19 @@
             showLoading();
 
             try {
-                const url = `${API_BASE_URL}/solicitudes?tipo=cliente`;
+                
+            	// 🔥 Obtener userData del localStorage
+                const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+                const usuarioId = userData.id;
+                
+                if (!usuarioId) {
+                    showAlert('Error: Usuario no autenticado', 'error');
+                    setTimeout(() => window.location.href = 'login.html', 2000);
+                    return;
+                }
+                
+             	// 🔥 Enviar usuarioId como parámetro
+                const url = `${API_BASE_URL}/solicitudes?tipo=cliente&usuarioId=${usuarioId}`;
                 console.log('Cargando solicitudes desde:', url);
 
                 const response = await fetch(url);

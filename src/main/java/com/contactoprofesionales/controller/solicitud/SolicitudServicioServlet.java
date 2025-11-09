@@ -6,7 +6,12 @@ import com.contactoprofesionales.service.solicitud.SolicitudServicioService;
 import com.contactoprofesionales.util.JsonResponse;
 import com.contactoprofesionales.exception.ValidationException;
 import com.contactoprofesionales.exception.DatabaseException;
+
+import com.contactoprofesionales.util.LocalDateTimeAdapter;
+import java.time.LocalDateTime;
+
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,7 +46,9 @@ public class SolicitudServicioServlet extends HttpServlet {
     
     private static final long serialVersionUID = 1L;
     private static final Logger logger = LoggerFactory.getLogger(SolicitudServicioServlet.class);
-    private final Gson gson = new Gson();
+    private final Gson gson = new GsonBuilder()
+            .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeAdapter())
+            .create();
     
     private SolicitudServicioService solicitudService;
     
@@ -145,6 +152,19 @@ public class SolicitudServicioServlet extends HttpServlet {
         try {
             // Verificar autenticación
             Integer usuarioId = obtenerUsuarioId(request);
+            
+            logger.info("busqueda de solicitudes para el usuario: "+ usuarioId);
+            
+            if (usuarioId == null) {
+            	String userIdParam = request.getParameter("usuarioId");
+                if (userIdParam != null && !userIdParam.isEmpty()) {
+                    usuarioId = Integer.parseInt(userIdParam);
+                    logger.info("Usuario ID obtenido de parámetro: {}", usuarioId);
+                }
+            }
+            
+            logger.info("Búsqueda de solicitudes para el usuario: {}", usuarioId);
+                        
             if (usuarioId == null) {
                 sendUnauthorized(response, "Usuario no autenticado");
                 return;

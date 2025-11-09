@@ -278,7 +278,12 @@
     async function cargarSolicitudesRecientes() {
       const userData = JSON.parse(localStorage.getItem('userData') || '{}');
       const usuarioId = userData.id;
-
+         
+      if (!userData.id) {
+          alert('Error: No se pudo obtener información del usuario');
+          return;
+      }
+          
       if (!usuarioId) {
         document.getElementById('solicitudesRecientesContainer').innerHTML =
           '<p style="text-align: center; color: var(--medium-gray); padding: 20px;">No hay solicitudes disponibles</p>';
@@ -286,7 +291,8 @@
       }
 
       try {
-        const response = await fetch('./api/solicitudes?tipo=cliente');
+        //const response = await fetch('./api/solicitudes?tipo=cliente');
+        const response = await fetch(`./api/solicitudes?tipo=cliente&usuarioId=${usuarioId}`);
         const data = await response.json();
 
         if (data.success && data.data.solicitudes) {
