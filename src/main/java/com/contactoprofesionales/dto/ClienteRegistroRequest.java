@@ -14,7 +14,7 @@ public class ClienteRegistroRequest {
     private String fotoPerfilBase64; // Foto en base64 opcional
     
     // Preferencias de búsqueda
-    private List<String> categoriasFavoritas;
+    private String categoriasFavoritas;
     private Integer radioBusqueda;
     private Double presupuestoPromedio;
     
@@ -77,11 +77,11 @@ public class ClienteRegistroRequest {
         this.fotoPerfilBase64 = fotoPerfilBase64;
     }
     
-    public List<String> getCategoriasFavoritas() {
+    public String getCategoriasFavoritas() {
         return categoriasFavoritas;
     }
     
-    public void setCategoriasFavoritas(List<String> categoriasFavoritas) {
+    public void setCategoriasFavoritas(String categoriasFavoritas) {
         this.categoriasFavoritas = categoriasFavoritas;
     }
     

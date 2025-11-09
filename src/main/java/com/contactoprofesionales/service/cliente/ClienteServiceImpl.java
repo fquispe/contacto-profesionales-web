@@ -11,6 +11,8 @@ import com.contactoprofesionales.exception.ClienteException;
 import com.contactoprofesionales.model.Cliente;
 import com.contactoprofesionales.model.DireccionCliente;
 
+import java.util.Arrays;
+
 import com.google.gson.Gson;
 import java.util.ArrayList;
 import java.util.List;
@@ -311,8 +313,11 @@ public class ClienteServiceImpl implements ClienteService {
         
         // Convertir JSON string a lista de categorías
         if (cliente.getCategoriasFavoritas() != null && !cliente.getCategoriasFavoritas().isEmpty()) {
-            String[] categorias = gson.fromJson(cliente.getCategoriasFavoritas(), String[].class);
-            dto.setCategoriasFavoritas(List.of(categorias));
+            String[] categorias = cliente.getCategoriasFavoritas().split(",");
+            List<String> categoriasList = Arrays.stream(categorias)
+                .map(String::trim)
+                .collect(Collectors.toList());
+            dto.setCategoriasFavoritas(categoriasList);
         }
         
         dto.setRadioBusqueda(cliente.getRadioBusqueda());

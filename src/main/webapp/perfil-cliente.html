@@ -946,20 +946,52 @@
 
         function validateForm() {
             let isValid = true;
+            const errors = [];
+            
+            // Validar campos requeridos
             document.querySelectorAll('[required]').forEach(field => {
                 if (!field.value.trim()) {
                     field.style.borderColor = 'var(--error-color)';
+                    errors.push(`El campo "${field.previousElementSibling?.textContent || 'requerido'}" es obligatorio`);
                     isValid = false;
                 } else {
                     field.style.borderColor = 'var(--border-color)';
                 }
             });
+            
+            // Validar teléfono
             const phone = document.getElementById('phone');
             if (phone.value && !/^[0-9]{9}$/.test(phone.value)) {
                 phone.style.borderColor = 'var(--error-color)';
-                showAlert('El teléfono debe tener 9 dígitos', 'error');
+                errors.push('El teléfono debe tener exactamente 9 dígitos numéricos');
                 isValid = false;
             }
+            
+            // Validar email
+            const email = document.getElementById('email');
+            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+            if (email.value && !emailRegex.test(email.value)) {
+                email.style.borderColor = 'var(--error-color)';
+                errors.push('El formato del correo electrónico no es válido');
+                isValid = false;
+            }
+            
+            // Validar que haya al menos una dirección
+            const addressInputs = document.querySelectorAll('input[name="address[]"]');
+            let hasValidAddress = false;
+            addressInputs.forEach(addr => {
+                if (addr.value.trim()) hasValidAddress = true;
+            });
+            
+            if (!hasValidAddress) {
+                errors.push('Debe proporcionar al menos una dirección');
+                isValid = false;
+            }
+            
+            if (errors.length > 0) {
+                showAlert('<strong>Errores de validación:</strong><br>' + errors.join('<br>'), 'error');
+            }
+            
             return isValid;
         }
 
@@ -1008,6 +1040,11 @@
             const url = clienteId ? `${BASE_URL}/${clienteId}` : BASE_URL;
             const method = clienteId ? 'PUT' : 'POST';
             
+            console.log('=== Enviando datos ===');
+            console.log('URL:', url);
+            console.log('Method:', method);
+            console.log('Data:', JSON.stringify(data, null, 2));
+            
             try {
                 const response = await fetch(url, {
                     method: method,
@@ -1015,7 +1052,21 @@
                     body: JSON.stringify(data)
                 });
                 
-                const result = await response.json();
+                console.log('Response status:', response.status);
+                console.log('Response headers:', response.headers);
+                
+                // Intentar parsear la respuesta
+                let result;
+                const contentType = response.headers.get("content-type");
+                
+                if (contentType && contentType.includes("application/json")) {
+                    result = await response.json();
+                    console.log('Response JSON:', result);
+                } else {
+                    const text = await response.text();
+                    console.error('Response no es JSON:', text);
+                    throw new Error('La respuesta del servidor no es JSON válido: ' + text);
+                }
                 
                 if (response.ok && result.success) {
                     showAlert(`✅ ${clienteId ? 'Actualizado' : 'Registrado'} exitosamente`, 'success');
@@ -1025,9 +1076,14 @@
                         }, 2000);
                     }
                 } else {
-                    throw new Error(result.message || 'Error al guardar');
+                    // Mostrar error específico del servidor
+                    const errorMsg = result.error 
+                        ? `${result.error.codigo}: ${result.error.mensaje}` 
+                        : result.message || 'Error desconocido';
+                    throw new Error(errorMsg);
                 }
             } catch (error) {
+                console.error('Error completo:', error);
                 showAlert('❌ Error: ' + error.message, 'error');
             }
         }
@@ -1129,65 +1185,99 @@
         }
 
         function cargarDatosCliente(cliente) {
-            // Cargar datos personales
+            console.log('Cargando datos del cliente:', cliente);
+            
+            // Datos personales
             document.getElementById('fullName').value = cliente.nombreCompleto || '';
             document.getElementById('email').value = cliente.email || '';
             document.getElementById('phone').value = cliente.telefono || '';
-
+            
+            // Foto de perfil
             if (cliente.fotoPerfilUrl) {
+                const previewImg = document.getElementById('previewImg');
+                const uploadPlaceholder = document.querySelector('.upload-placeholder');
+                
+                previewImg.src = cliente.fotoPerfilUrl;
+                previewImg.style.display = 'block';
+                if (uploadPlaceholder) uploadPlaceholder.style.display = 'none';
+                
                 photoBase64 = cliente.fotoPerfilUrl;
-                document.getElementById('photoPreview').innerHTML =
-                    `<img src="${cliente.fotoPerfilUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
             }
-
-            // Cargar preferencias
-            if (cliente.categoriasFavoritas && Array.isArray(cliente.categoriasFavoritas)) {
-                cliente.categoriasFavoritas.forEach(cat => {
-                    const checkbox = document.querySelector(`input[name="categoria"][value="${cat}"]`);
-                    if (checkbox) checkbox.checked = true;
+            
+            // ✅ CATEGORÍAS FAVORITAS - CORREGIDO
+            if (cliente.categoriasFavoritas) {
+                console.log('Categorías recibidas:', cliente.categoriasFavoritas);
+                
+                // Limpiar checkboxes previos
+                document.querySelectorAll('input[name="categoria"]').forEach(cb => cb.checked = false);
+                
+                // Manejar si es array o string
+                let categorias = [];
+                if (Array.isArray(cliente.categoriasFavoritas)) {
+                    categorias = cliente.categoriasFavoritas;
+                } else if (typeof cliente.categoriasFavoritas === 'string') {
+                    categorias = cliente.categoriasFavoritas.split(',').map(c => c.trim());
+                }
+                
+                console.log('Categorías procesadas:', categorias);
+                
+                // Marcar checkboxes
+                categorias.forEach(cat => {
+                    // Limpiar comillas extras y espacios
+                    const cleanCat = String(cat).replace(/^["']|["']$/g, '').trim();
+                    
+                    if (!cleanCat) return; // Saltar si está vacío
+                    
+                    const checkbox = document.querySelector(`input[name="categoria"][value="${cleanCat}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        console.log(`✓ Categoría marcada: ${cleanCat}`);
+                    } else {
+                        console.warn(`⚠ Checkbox no encontrado para categoría: "${cleanCat}"`);
+                        console.log(`Checkboxes disponibles:`, 
+                            Array.from(document.querySelectorAll('input[name="categoria"]'))
+                                .map(cb => cb.value)
+                        );
+                    }
                 });
             }
-
-            if (cliente.radioBusqueda) {
-                document.getElementById('searchRadius').value = cliente.radioBusqueda;
-                document.getElementById('rangeValue').textContent = cliente.radioBusqueda + ' km';
-            }
-
-            if (cliente.presupuestoPromedio) {
-                document.getElementById('averageBudget').value = cliente.presupuestoPromedio;
-            }
-
-            // Cargar notificaciones
-            if (cliente.notificacionesEmail) {
-                document.getElementById('emailNotifications').classList.add('active');
-            }
-            if (cliente.notificacionesPush) {
-                document.getElementById('pushNotifications').classList.add('active');
-            }
-            if (cliente.notificacionesPromociones) {
-                document.getElementById('promotionNotifications').classList.add('active');
-            }
-            if (cliente.notificacionesResenas) {
-                document.getElementById('reviewNotifications').classList.add('active');
-            }
-
-            // Cargar privacidad
-            if (cliente.perfilVisible) {
-                document.getElementById('profileVisible').classList.add('active');
-            }
-            if (cliente.compartirUbicacion) {
-                document.getElementById('shareLocation').classList.add('active');
-            }
-            if (cliente.historialPublico) {
-                document.getElementById('publicHistory').classList.add('active');
-            }
-
-            // Cargar direcciones
+            
+         	// ✅ PREFERENCIAS - CON VALIDACIÓN
+            const searchRadius = document.getElementById('searchRadius');
+            const radiusValue = document.getElementById('radiusValue');
+            const averageBudget = document.getElementById('averageBudget');
+            
+            if (searchRadius) searchRadius.value = cliente.radioBusqueda || 10;
+            if (radiusValue) radiusValue.textContent = cliente.radioBusqueda || 10; // ⚠️ PROBABLEMENTE LÍNEA 1247
+            if (averageBudget) averageBudget.value = cliente.presupuestoPromedio || '';
+            
+            // ✅ NOTIFICACIONES - CON VALIDACIÓN
+            const emailNotif = document.getElementById('emailNotif');
+            const pushNotif = document.getElementById('pushNotif');
+            const promoNotif = document.getElementById('promoNotif');
+            const reviewNotif = document.getElementById('reviewNotif');
+            
+            if (emailNotif) emailNotif.checked = cliente.notificacionesEmail !== false;
+            if (pushNotif) pushNotif.checked = cliente.notificacionesPush !== false;
+            if (promoNotif) promoNotif.checked = cliente.notificacionesPromociones !== false;
+            if (reviewNotif) reviewNotif.checked = cliente.notificacionesResenas !== false;
+            
+            // ✅ PRIVACIDAD - CON VALIDACIÓN
+            const profileVisible = document.getElementById('profileVisible');
+            const shareLocation = document.getElementById('shareLocation');
+            const publicHistory = document.getElementById('publicHistory');
+            
+            if (profileVisible) profileVisible.checked = cliente.perfilVisible !== false;
+            if (shareLocation) shareLocation.checked = cliente.compartirUbicacion === true;
+            if (publicHistory) publicHistory.checked = cliente.historialPublico === true;
+            
+            // Direcciones
             if (cliente.direcciones && cliente.direcciones.length > 0) {
                 cargarDirecciones(cliente.direcciones);
             }
-
-            console.log('✓ Datos del cliente cargados');
+            
+            console.log('✓ Datos del cliente cargados completamente');
+        
         }
 
         function cargarDirecciones(direcciones) {

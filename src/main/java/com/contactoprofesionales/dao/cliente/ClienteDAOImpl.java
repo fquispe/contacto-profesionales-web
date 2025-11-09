@@ -5,6 +5,7 @@ import com.contactoprofesionales.model.Cliente;
 import com.contactoprofesionales.util.DatabaseConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import java.math.BigDecimal;
 
 import java.sql.*;
 import java.time.LocalDateTime;
@@ -352,8 +353,19 @@ public class ClienteDAOImpl implements ClienteDAO {
         Integer radioBusqueda = (Integer) rs.getObject("radio_busqueda");
         cliente.setRadioBusqueda(radioBusqueda);
         
-        Double presupuestoPromedio = (Double) rs.getObject("presupuesto_promedio");
-        cliente.setPresupuestoPromedio(presupuestoPromedio);
+        //Double presupuestoPromedio = (Double) rs.getObject("presupuesto_promedio");
+        //cliente.setPresupuestoPromedio(presupuestoPromedio);
+        
+        Object presupuestoObj = rs.getObject("presupuesto_promedio");
+        if (presupuestoObj != null) {
+            if (presupuestoObj instanceof BigDecimal) {
+            	cliente.setPresupuestoPromedio(((BigDecimal) presupuestoObj).doubleValue());
+            } else if (presupuestoObj instanceof Double) {
+            	cliente.setPresupuestoPromedio((Double) presupuestoObj);
+            } else if (presupuestoObj instanceof Number) {
+            	cliente.setPresupuestoPromedio(((Number) presupuestoObj).doubleValue());
+            }
+        }
         
         cliente.setNotificacionesEmail(rs.getBoolean("notificaciones_email"));
         cliente.setNotificacionesPush(rs.getBoolean("notificaciones_push"));
