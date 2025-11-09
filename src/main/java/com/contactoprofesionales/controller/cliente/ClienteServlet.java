@@ -51,31 +51,49 @@ public class ClienteServlet extends HttpServlet {
      * GET - Listar todos los clientes o obtener uno específico por ID
      */
     @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response) 
+    protected void doGet(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
-        
+
         String pathInfo = request.getPathInfo();
-        
+        String email = request.getParameter("email");
+
         try {
+            // GET /api/clientes?email={email} - Buscar cliente por email
+            if (email != null && !email.trim().isEmpty()) {
+                try {
+                    ClienteDTO cliente = clienteService.buscarPorEmail(email);
+                    sendSuccessResponse(response, HttpServletResponse.SC_OK, cliente);
+                } catch (ClienteException e) {
+                    // Si no encuentra el cliente, retornar error 404
+                    if ("NO_ENCONTRADO".equals(e.getCodigo())) {
+                        Map<String, Object> responseData = new HashMap<>();
+                        responseData.put("encontrado", false);
+                        responseData.put("mensaje", "No se encontró un perfil de cliente asociado");
+                        sendSuccessResponse(response, HttpServletResponse.SC_OK, responseData);
+                    } else {
+                        sendErrorResponse(response, e);
+                    }
+                }
+            }
             // GET /api/clientes/{id} - Obtener cliente por ID
-            if (pathInfo != null && !pathInfo.equals("/")) {
+            else if (pathInfo != null && !pathInfo.equals("/")) {
                 Long id = extractIdFromPath(pathInfo);
                 ClienteDTO cliente = clienteService.obtenerPerfil(id);
                 sendSuccessResponse(response, HttpServletResponse.SC_OK, cliente);
-            } 
+            }
             // GET /api/clientes - Listar todos los clientes activos
             else {
                 List<ClienteDTO> clientes = clienteService.listarClientesActivos();
                 sendSuccessResponse(response, HttpServletResponse.SC_OK, clientes);
             }
-            
+
         } catch (ClienteException e) {
             sendErrorResponse(response, e);
         } catch (NumberFormatException e) {
-            sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST, 
+            sendErrorResponse(response, HttpServletResponse.SC_BAD_REQUEST,
                 "ID_INVALIDO", "El ID proporcionado no es válido");
         }
     }

@@ -264,8 +264,8 @@
     // Mostrar nombre del usuario
     document.addEventListener('DOMContentLoaded', () => {
       const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-      if (userData.name) {
-        document.getElementById('welcomeTitle').textContent = `Bienvenido(a), ${userData.name}`;
+      if (userData.nombre) {
+        document.getElementById('welcomeTitle').textContent = `Bienvenido(a), ${userData.nombre}`;
       } else {
         document.getElementById('welcomeTitle').textContent = 'Bienvenido(a), Usuario';
       }
