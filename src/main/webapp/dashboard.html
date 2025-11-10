@@ -178,12 +178,19 @@
   <!-- Sidebar -->
   <aside class="sidebar">
     <div class="logo">ServiciosProfesionales</div>
-    <nav class="menu">
+    <nav class="menu" id="mainMenu">
       <div class="menu-item active" onclick="showSection('home')">🏠 <span>Inicio</span></div>
-      <div class="menu-item" onclick="goToActualizarInformacion()">👤 <span>Actualizar Información</span></div>
-      <div class="menu-item" onclick="goToListadoSolicitudes()">📋 <span>Mis Solicitudes</span></div>
-      <div class="menu-item" onclick="goToBuscarProfesional()">🔍 <span>Buscar Profesional</span></div>
-	  <div class="menu-item" onclick="goToProfesional()">🔧 <span>Información Profesional</span></div>
+
+      <!-- Opciones de Cliente -->
+      <div class="menu-item menu-cliente" onclick="goToActualizarInformacion()">👤 <span>Actualizar Información</span></div>
+      <div class="menu-item menu-cliente" onclick="goToListadoSolicitudes()">📋 <span>Mis Solicitudes</span></div>
+      <div class="menu-item menu-cliente" onclick="goToBuscarProfesional()">🔍 <span>Buscar Profesional</span></div>
+
+      <!-- Opciones de Profesional -->
+	  <div class="menu-item menu-profesional" onclick="goToProfesional()">🔧 <span>Información Profesional</span></div>
+      <div class="menu-item menu-profesional" onclick="goToMisServicios()">💼 <span>Mis Servicios</span></div>
+
+      <!-- Común para todos -->
       <div class="menu-item" onclick="showSection('stats')">📊 <span>Estadísticas</span></div>
     </nav>
   </aside>
@@ -264,15 +271,47 @@
     // Mostrar nombre del usuario
     document.addEventListener('DOMContentLoaded', () => {
       const userData = JSON.parse(localStorage.getItem('userData') || '{}');
-      if (userData.nombre) {
-        document.getElementById('welcomeTitle').textContent = `Bienvenido(a), ${userData.nombre}`;
-      } else {
-        document.getElementById('welcomeTitle').textContent = 'Bienvenido(a), Usuario';
-      }
+
+      // Determinar nombre a mostrar
+      const nombreMostrar = userData.nombreCompleto || userData.nombre || 'Usuario';
+      document.getElementById('welcomeTitle').textContent = `Bienvenido(a), ${nombreMostrar}`;
+
+      // Detectar rol del usuario y ajustar menú
+      configurarMenuSegunRol(userData);
 
       // Cargar solicitudes recientes
       cargarSolicitudesRecientes();
     });
+
+    // Configurar menú según rol del usuario
+    function configurarMenuSegunRol(userData) {
+      // Detectar rol (puede venir de diferentes fuentes según el flujo)
+      const tipoRol = userData.tipoRol || userData.tipo || 'CLIENTE';
+      const esCliente = userData.esCliente !== undefined ? userData.esCliente :
+                       (tipoRol === 'CLIENTE' || tipoRol === 'AMBOS');
+      const esProfesional = userData.esProfesional !== undefined ? userData.esProfesional :
+                           (tipoRol === 'PROFESIONAL' || tipoRol === 'AMBOS');
+
+      console.log('Rol detectado:', { tipoRol, esCliente, esProfesional });
+
+      // Obtener elementos del menú
+      const menuCliente = document.querySelectorAll('.menu-cliente');
+      const menuProfesional = document.querySelectorAll('.menu-profesional');
+
+      // Mostrar/ocultar según rol
+      menuCliente.forEach(item => {
+        item.style.display = esCliente ? 'flex' : 'none';
+      });
+
+      menuProfesional.forEach(item => {
+        item.style.display = esProfesional ? 'flex' : 'none';
+      });
+
+      // Si tiene ambos roles, podría agregarse un selector de vista aquí
+      if (tipoRol === 'AMBOS') {
+        console.log('Usuario con rol AMBOS - mostrando todas las opciones');
+      }
+    }
 
     // Cargar solicitudes recientes
     async function cargarSolicitudesRecientes() {
@@ -406,6 +445,11 @@
     //Listado de Solicitudes
     function goToListadoSolicitudes(){
     	window.location.href = "listado-solicitud-servicios.html";
+    }
+
+    // Mis Servicios (Para profesionales)
+    function goToMisServicios(){
+        window.location.href = "mis-servicios-profesional.html";
     }
 
     // Renderizar gráfico

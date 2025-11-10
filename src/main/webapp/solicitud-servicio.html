@@ -876,7 +876,18 @@
                 <div class="form-step" data-step="2">
                     <div class="form-section">
                         <h3 class="section-title">📍 Ubicación del Servicio</h3>
-                        
+
+                        <!-- Mensaje informativo de ubicación precargada -->
+                        <div id="ubicacionPrecargadaInfo" style="display: none; background: rgba(23, 162, 184, 0.1); padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 2px solid rgba(23, 162, 184, 0.2);">
+                            <div style="display: flex; align-items: center; gap: 10px; color: var(--info-color); margin-bottom: 5px;">
+                                <span>ℹ️</span>
+                                <strong>Ubicación del perfil cargada</strong>
+                            </div>
+                            <div id="ubicacionPrecargadaDetalle" style="font-size: 14px; color: #0c5460;">
+                                <!-- Se llenará dinámicamente -->
+                            </div>
+                        </div>
+
                         <div class="form-group">
                             <label class="form-label">
                                 Selecciona una dirección guardada
@@ -1146,6 +1157,9 @@
         </div>
     </div>
 
+    <!-- API de Ubicación -->
+    <script src="assets/js/ubicacion-api.js"></script>
+
 	<script>
 		// ============================================
 		// SERVICIO DE API
@@ -1238,7 +1252,11 @@
 		
 		    // Cargar información del profesional
 		    cargarInfoProfesional(profesionalId);
-		
+
+		    // TODO: Auto-cargar ubicación del cliente desde su perfil
+		    // Requiere endpoint: GET /api/ubicacion/distrito/{id}/jerarquia
+		    // cargarUbicacionCliente();
+
 		    // Set minimum date to today
 		    const today = new Date().toISOString().split('T')[0];
 		    document.getElementById('serviceDate').setAttribute('min', today);
