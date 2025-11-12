@@ -14,6 +14,10 @@ public class EspecialidadProfesional {
     private Boolean esPrincipal;
     private Integer aniosExperiencia;
     private String descripcion;
+    private Double costo;
+    private String tipoCosto; // 'hora', 'dia', 'mes'
+    private Boolean incluyeMateriales;
+    private Integer orden; // 1, 2, o 3
     private LocalDateTime fechaCreacion;
 
     // Campos adicionales para joins (no se persisten, solo para consultas)
@@ -24,6 +28,8 @@ public class EspecialidadProfesional {
     public EspecialidadProfesional() {
         this.esPrincipal = false;
         this.aniosExperiencia = 0;
+        this.incluyeMateriales = false;
+        this.orden = 1;
         this.fechaCreacion = LocalDateTime.now();
     }
 
@@ -121,6 +127,38 @@ public class EspecialidadProfesional {
         this.categoriaDescripcion = categoriaDescripcion;
     }
 
+    public Double getCosto() {
+        return costo;
+    }
+
+    public void setCosto(Double costo) {
+        this.costo = costo;
+    }
+
+    public String getTipoCosto() {
+        return tipoCosto;
+    }
+
+    public void setTipoCosto(String tipoCosto) {
+        this.tipoCosto = tipoCosto;
+    }
+
+    public Boolean getIncluyeMateriales() {
+        return incluyeMateriales;
+    }
+
+    public void setIncluyeMateriales(Boolean incluyeMateriales) {
+        this.incluyeMateriales = incluyeMateriales;
+    }
+
+    public Integer getOrden() {
+        return orden;
+    }
+
+    public void setOrden(Integer orden) {
+        this.orden = orden;
+    }
+
     @Override
     public String toString() {
         return "EspecialidadProfesional{" +
@@ -129,6 +167,10 @@ public class EspecialidadProfesional {
                 ", categoriaId=" + categoriaId +
                 ", esPrincipal=" + esPrincipal +
                 ", aniosExperiencia=" + aniosExperiencia +
+                ", costo=" + costo +
+                ", tipoCosto='" + tipoCosto + '\'' +
+                ", incluyeMateriales=" + incluyeMateriales +
+                ", orden=" + orden +
                 ", categoriaNombre='" + categoriaNombre + '\'' +
                 '}';
     }

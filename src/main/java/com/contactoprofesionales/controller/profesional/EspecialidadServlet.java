@@ -154,15 +154,24 @@ public class EspecialidadServlet extends HttpServlet {
                 ? jsonObject.get("aniosExperiencia").getAsInt() : null;
             String descripcion = jsonObject.has("descripcion") && !jsonObject.get("descripcion").isJsonNull()
                 ? jsonObject.get("descripcion").getAsString() : null;
+            Double costo = jsonObject.has("costo") && !jsonObject.get("costo").isJsonNull()
+                ? jsonObject.get("costo").getAsDouble() : null;
+            String tipoCosto = jsonObject.has("tipoCosto") && !jsonObject.get("tipoCosto").isJsonNull()
+                ? jsonObject.get("tipoCosto").getAsString() : null;
+            Boolean incluyeMateriales = jsonObject.has("incluyeMateriales") && !jsonObject.get("incluyeMateriales").isJsonNull()
+                ? jsonObject.get("incluyeMateriales").getAsBoolean() : false;
+            Integer orden = jsonObject.has("orden") && !jsonObject.get("orden").isJsonNull()
+                ? jsonObject.get("orden").getAsInt() : 1;
             Boolean esPrincipal = jsonObject.has("esPrincipal") && !jsonObject.get("esPrincipal").isJsonNull()
                 ? jsonObject.get("esPrincipal").getAsBoolean() : false;
 
-            logger.debug("Datos parseados - categoriaId: {}, aniosExp: {}, esPrincipal: {}",
-                categoriaId, aniosExperiencia, esPrincipal);
+            logger.debug("Datos parseados - categoriaId: {}, aniosExp: {}, costo: {}, tipoCosto: {}, orden: {}, esPrincipal: {}",
+                categoriaId, aniosExperiencia, costo, tipoCosto, orden, esPrincipal);
 
             // Agregar especialidad
             EspecialidadDTO especialidadCreada = especialidadService.agregar(
-                profesionalId, categoriaId, aniosExperiencia, descripcion, esPrincipal);
+                profesionalId, categoriaId, aniosExperiencia, descripcion, costo, tipoCosto,
+                incluyeMateriales, orden, esPrincipal);
 
             logger.info("✓ Especialidad agregada exitosamente con ID: {}", especialidadCreada.getId());
 

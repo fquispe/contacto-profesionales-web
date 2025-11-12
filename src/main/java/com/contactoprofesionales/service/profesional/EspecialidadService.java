@@ -18,13 +18,18 @@ public interface EspecialidadService {
      * @param categoriaId ID de la categoría de servicio
      * @param aniosExp Años de experiencia en la especialidad
      * @param desc Descripción de la especialidad
+     * @param costo Costo del servicio
+     * @param tipoCosto Tipo de costo (hora, dia, mes)
+     * @param incluyeMateriales Si incluye materiales
+     * @param orden Orden de la especialidad (1-3)
      * @param esPrincipal Si es la especialidad principal del profesional
      * @return Especialidad agregada con su ID generado
      * @throws ValidationException si los datos no son válidos o se excede el límite de especialidades
      * @throws DatabaseException si ocurre un error al agregar en la base de datos
      */
     EspecialidadDTO agregar(Integer profesionalId, Integer categoriaId, Integer aniosExp,
-                           String desc, Boolean esPrincipal)
+                           String desc, Double costo, String tipoCosto, Boolean incluyeMateriales,
+                           Integer orden, Boolean esPrincipal)
             throws ValidationException, DatabaseException;
 
     /**

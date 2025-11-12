@@ -13,6 +13,10 @@ public class EspecialidadDTO {
     private Boolean esPrincipal;
     private Integer aniosExperiencia;
     private String descripcion;
+    private Double costo;
+    private String tipoCosto; // 'hora', 'dia', 'mes'
+    private Boolean incluyeMateriales;
+    private Integer orden; // 1, 2, o 3
 
     // Constructor vacío
     public EspecialidadDTO() {
@@ -88,5 +92,37 @@ public class EspecialidadDTO {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+
+    public Double getCosto() {
+        return costo;
+    }
+
+    public void setCosto(Double costo) {
+        this.costo = costo;
+    }
+
+    public String getTipoCosto() {
+        return tipoCosto;
+    }
+
+    public void setTipoCosto(String tipoCosto) {
+        this.tipoCosto = tipoCosto;
+    }
+
+    public Boolean getIncluyeMateriales() {
+        return incluyeMateriales;
+    }
+
+    public void setIncluyeMateriales(Boolean incluyeMateriales) {
+        this.incluyeMateriales = incluyeMateriales;
+    }
+
+    public Integer getOrden() {
+        return orden;
+    }
+
+    public void setOrden(Integer orden) {
+        this.orden = orden;
     }
 }

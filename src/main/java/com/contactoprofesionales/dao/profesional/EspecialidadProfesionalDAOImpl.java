@@ -20,8 +20,8 @@ public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDA
 
     private static final String INSERT_ESPECIALIDAD =
         "INSERT INTO especialidades_profesional (profesional_id, categoria_id, es_principal, " +
-        "anios_experiencia, descripcion, fecha_creacion) " +
-        "VALUES (?, ?, ?, ?, ?, ?) RETURNING id";
+        "anios_experiencia, descripcion, costo, tipo_costo, incluye_materiales, orden, fecha_creacion) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
 
     private static final String SELECT_BY_PROFESIONAL =
         "SELECT e.*, c.nombre AS categoria_nombre, c.descripcion AS categoria_descripcion " +
@@ -63,6 +63,10 @@ public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDA
             ps.setBoolean(index++, especialidad.getEsPrincipal() != null ? especialidad.getEsPrincipal() : false);
             ps.setObject(index++, especialidad.getAniosExperiencia());
             ps.setString(index++, especialidad.getDescripcion());
+            ps.setObject(index++, especialidad.getCosto());
+            ps.setString(index++, especialidad.getTipoCosto());
+            ps.setBoolean(index++, especialidad.getIncluyeMateriales() != null ? especialidad.getIncluyeMateriales() : false);
+            ps.setObject(index++, especialidad.getOrden() != null ? especialidad.getOrden() : 1);
             ps.setTimestamp(index++, Timestamp.valueOf(java.time.LocalDateTime.now()));
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -214,6 +218,15 @@ public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDA
         especialidad.setAniosExperiencia(aniosExperiencia);
 
         especialidad.setDescripcion(rs.getString("descripcion"));
+
+        Double costo = (Double) rs.getObject("costo");
+        especialidad.setCosto(costo);
+
+        especialidad.setTipoCosto(rs.getString("tipo_costo"));
+        especialidad.setIncluyeMateriales(rs.getBoolean("incluye_materiales"));
+
+        Integer orden = (Integer) rs.getObject("orden");
+        especialidad.setOrden(orden);
 
         Timestamp fechaCreacion = rs.getTimestamp("fecha_creacion");
         if (fechaCreacion != null) {

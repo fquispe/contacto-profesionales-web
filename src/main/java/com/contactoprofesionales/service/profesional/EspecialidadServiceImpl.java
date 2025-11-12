@@ -36,13 +36,14 @@ public class EspecialidadServiceImpl implements EspecialidadService {
 
     @Override
     public EspecialidadDTO agregar(Integer profesionalId, Integer categoriaId, Integer aniosExp,
-                                   String desc, Boolean esPrincipal)
+                                   String desc, Double costo, String tipoCosto, Boolean incluyeMateriales,
+                                   Integer orden, Boolean esPrincipal)
             throws ValidationException, DatabaseException {
         logger.debug("Agregando especialidad para profesional ID: {}, categoría ID: {}",
                     profesionalId, categoriaId);
 
         // Validar parámetros
-        validarParametrosAgregar(profesionalId, categoriaId, aniosExp, esPrincipal);
+        validarParametrosAgregar(profesionalId, categoriaId, aniosExp, costo, tipoCosto, orden, esPrincipal);
 
         try {
             // Validar que no se exceda el límite de especialidades
@@ -86,6 +87,10 @@ public class EspecialidadServiceImpl implements EspecialidadService {
             especialidad.setCategoriaId(categoriaId);
             especialidad.setAniosExperiencia(aniosExp != null ? aniosExp : 0);
             especialidad.setDescripcion(desc != null ? desc.trim() : null);
+            especialidad.setCosto(costo);
+            especialidad.setTipoCosto(tipoCosto);
+            especialidad.setIncluyeMateriales(incluyeMateriales != null ? incluyeMateriales : false);
+            especialidad.setOrden(orden != null ? orden : 1);
             especialidad.setEsPrincipal(esPrincipal != null ? esPrincipal : false);
 
             // Registrar especialidad
@@ -247,7 +252,8 @@ public class EspecialidadServiceImpl implements EspecialidadService {
      * Valida los parámetros para agregar una especialidad
      */
     private void validarParametrosAgregar(Integer profesionalId, Integer categoriaId,
-                                          Integer aniosExp, Boolean esPrincipal)
+                                          Integer aniosExp, Double costo, String tipoCosto,
+                                          Integer orden, Boolean esPrincipal)
             throws ValidationException {
         List<String> errores = new ArrayList<>();
 
@@ -271,6 +277,20 @@ public class EspecialidadServiceImpl implements EspecialidadService {
             }
         }
 
+        if (costo != null && costo < 0) {
+            errores.add("El costo no puede ser negativo");
+        }
+
+        if (tipoCosto != null && !tipoCosto.matches("^(hora|dia|mes)$")) {
+            errores.add("El tipo de costo debe ser 'hora', 'dia' o 'mes'");
+        }
+
+        if (orden != null) {
+            if (orden < 1 || orden > 3) {
+                errores.add("El orden debe estar entre 1 y 3");
+            }
+        }
+
         if (!errores.isEmpty()) {
             throw new ValidationException(String.join(". ", errores));
         }
@@ -290,6 +310,10 @@ public class EspecialidadServiceImpl implements EspecialidadService {
         dto.setEsPrincipal(especialidad.getEsPrincipal());
         dto.setAniosExperiencia(especialidad.getAniosExperiencia());
         dto.setDescripcion(especialidad.getDescripcion());
+        dto.setCosto(especialidad.getCosto());
+        dto.setTipoCosto(especialidad.getTipoCosto());
+        dto.setIncluyeMateriales(especialidad.getIncluyeMateriales());
+        dto.setOrden(especialidad.getOrden());
 
         return dto;
     }
