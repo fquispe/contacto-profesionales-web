@@ -184,6 +184,7 @@
       <div class="menu-item" onclick="goToListadoSolicitudes()">📋 <span>Mis Solicitudes</span></div>
       <div class="menu-item" onclick="goToBuscarProfesional()">🔍 <span>Buscar Profesional</span></div>
 	  <div class="menu-item" onclick="goToProfesional()">🔧 <span>Información Profesional</span></div>
+      <div class="menu-item" onclick="goToServiciosProfesional()">⚙️ <span>Servicios Profesionales</span></div>
       <div class="menu-item" onclick="showSection('stats')">📊 <span>Estadísticas</span></div>
     </nav>
   </aside>
@@ -406,6 +407,11 @@
     //Listado de Solicitudes
     function goToListadoSolicitudes(){
     	window.location.href = "listado-solicitud-servicios.html";
+    }
+
+    // Servicios Profesionales
+    function goToServiciosProfesional(){
+    	window.location.href = "servicios-profesional.html";
     }
 
     // Renderizar gráfico
