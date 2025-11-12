@@ -3,40 +3,31 @@ package com.contactoprofesionales.model;
 import java.time.LocalDateTime;
 
 /**
- * Modelo que representa un usuario del sistema.
- * Aplicación de SRP: Solo encapsula datos del usuario.
+ * Modelo que representa la tabla 'users' (autenticación)
  */
 public class Usuario {
     private Integer id;
-    private String nombre;
     private String email;
     private String passwordHash;
-    private String telefono;
     private LocalDateTime fechaRegistro;
     private LocalDateTime ultimoAcceso;
-    private boolean activo;
+    private Boolean activo;
+    private Long usuarioId; // FK a tabla 'usuarios'
+    private String username;
+    private String rolSistema;
+    private Integer intentosFallidos;
+    private Boolean bloqueado;
+    private LocalDateTime fechaBloqueo;
+    private String tokenRecuperacion;
+    private LocalDateTime fechaExpiracionToken;
+    private Boolean requiereCambioPassword;
 
-    // Constructor vacío
     public Usuario() {
-    }
-
-    // Constructor con parámetros principales
-    public Usuario(String nombre, String email, String passwordHash) {
-        this.nombre = nombre;
-        this.email = email;
-        this.passwordHash = passwordHash;
         this.activo = true;
-    }
-
-    // Constructor completo
-    public Usuario(Integer id, String nombre, String email, String passwordHash, 
-                  String telefono, boolean activo) {
-        this.id = id;
-        this.nombre = nombre;
-        this.email = email;
-        this.passwordHash = passwordHash;
-        this.telefono = telefono;
-        this.activo = activo;
+        this.fechaRegistro = LocalDateTime.now();
+        this.intentosFallidos = 0;
+        this.bloqueado = false;
+        this.requiereCambioPassword = false;
     }
 
     // Getters y Setters
@@ -46,14 +37,6 @@ public class Usuario {
 
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
     }
 
     public String getEmail() {
@@ -72,14 +55,6 @@ public class Usuario {
         this.passwordHash = passwordHash;
     }
 
-    public String getTelefono() {
-        return telefono;
-    }
-
-    public void setTelefono(String telefono) {
-        this.telefono = telefono;
-    }
-
     public LocalDateTime getFechaRegistro() {
         return fechaRegistro;
     }
@@ -96,22 +71,94 @@ public class Usuario {
         this.ultimoAcceso = ultimoAcceso;
     }
 
-    public boolean isActivo() {
+    public Boolean getActivo() {
         return activo;
     }
 
-    public void setActivo(boolean activo) {
+    public void setActivo(Boolean activo) {
         this.activo = activo;
+    }
+
+    public Long getUsuarioId() {
+        return usuarioId;
+    }
+
+    public void setUsuarioId(Long usuarioId) {
+        this.usuarioId = usuarioId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
+    }
+
+    public String getRolSistema() {
+        return rolSistema;
+    }
+
+    public void setRolSistema(String rolSistema) {
+        this.rolSistema = rolSistema;
+    }
+
+    public Integer getIntentosFallidos() {
+        return intentosFallidos;
+    }
+
+    public void setIntentosFallidos(Integer intentosFallidos) {
+        this.intentosFallidos = intentosFallidos;
+    }
+
+    public Boolean getBloqueado() {
+        return bloqueado;
+    }
+
+    public void setBloqueado(Boolean bloqueado) {
+        this.bloqueado = bloqueado;
+    }
+
+    public LocalDateTime getFechaBloqueo() {
+        return fechaBloqueo;
+    }
+
+    public void setFechaBloqueo(LocalDateTime fechaBloqueo) {
+        this.fechaBloqueo = fechaBloqueo;
+    }
+
+    public String getTokenRecuperacion() {
+        return tokenRecuperacion;
+    }
+
+    public void setTokenRecuperacion(String tokenRecuperacion) {
+        this.tokenRecuperacion = tokenRecuperacion;
+    }
+
+    public LocalDateTime getFechaExpiracionToken() {
+        return fechaExpiracionToken;
+    }
+
+    public void setFechaExpiracionToken(LocalDateTime fechaExpiracionToken) {
+        this.fechaExpiracionToken = fechaExpiracionToken;
+    }
+
+    public Boolean getRequiereCambioPassword() {
+        return requiereCambioPassword;
+    }
+
+    public void setRequiereCambioPassword(Boolean requiereCambioPassword) {
+        this.requiereCambioPassword = requiereCambioPassword;
     }
 
     @Override
     public String toString() {
         return "Usuario{" +
                 "id=" + id +
-                ", nombre='" + nombre + '\'' +
                 ", email='" + email + '\'' +
+                ", usuarioId=" + usuarioId +
+                ", username='" + username + '\'' +
                 ", activo=" + activo +
-                ", fechaRegistro=" + fechaRegistro +
                 '}';
     }
 }

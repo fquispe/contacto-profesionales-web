@@ -1,4 +1,4 @@
-package com.contactoprofesionales.controller;
+package com.contactoprofesionales.controller.auth;
 
 import com.contactoprofesionales.dto.ResponseDTO;
 import com.google.gson.Gson;
@@ -28,7 +28,11 @@ import java.util.logging.Logger;
 @WebServlet(name = "AuthServlet", urlPatterns = {"/api/auth/me"})
 public class AuthServlet extends HttpServlet {
 
-    private static final Logger logger = Logger.getLogger(AuthServlet.class.getName());
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private static final Logger logger = Logger.getLogger(AuthServlet.class.getName());
     private final Gson gson = new Gson();
 
     /**

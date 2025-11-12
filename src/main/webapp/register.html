@@ -1017,6 +1017,25 @@
             strengthText.textContent = text;
         }
 
+        function validatePasswordMatch() {
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+            
+            if (confirmPassword.length === 0) {
+                clearFieldError('confirmPassword');
+                return true;
+            }
+            
+            if (password !== confirmPassword) {
+                showFieldError('confirmPassword', 'Las contraseñas no coinciden');
+                return false;
+            }
+            
+            clearFieldError('confirmPassword');
+            confirmPasswordInput.classList.add('success');
+            return true;
+        }
+        
         // ============================================
         // FUNCIONES DE ERROR Y ALERTAS
         // ============================================

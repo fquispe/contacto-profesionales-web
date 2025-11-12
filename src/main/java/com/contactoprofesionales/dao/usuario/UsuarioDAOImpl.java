@@ -8,12 +8,6 @@ import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 
-/**
- * Implementación de UsuarioDAO con PostgreSQL.
- * 
- * Aplicación de SRP: Solo se encarga de persistencia de usuarios.
- * Usa PreparedStatement para prevenir SQL Injection.
- */
 public class UsuarioDAOImpl implements UsuarioDAO {
     private static final Logger logger = LoggerFactory.getLogger(UsuarioDAOImpl.class);
 
@@ -21,9 +15,9 @@ public class UsuarioDAOImpl implements UsuarioDAO {
     public Usuario buscarPorEmail(String email) throws DatabaseException {
         logger.debug("Buscando usuario por email: {}", email);
         
-        String sql = "SELECT id, nombre, email, password_hash, telefono, " +
-                     "fecha_registro, ultimo_acceso, activo " +
-                     "FROM users WHERE email = ? AND activo = true";
+        String sql = "SELECT id, email, password_hash, fecha_registro, ultimo_acceso, " +
+                     "activo, usuario_id, username, rol_sistema FROM users " +
+                     "WHERE email = ? AND activo = true";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -51,9 +45,8 @@ public class UsuarioDAOImpl implements UsuarioDAO {
     public Usuario buscarPorId(Integer id) throws DatabaseException {
         logger.debug("Buscando usuario por ID: {}", id);
         
-        String sql = "SELECT id, nombre, email, password_hash, telefono, " +
-                     "fecha_registro, ultimo_acceso, activo " +
-                     "FROM users WHERE id = ?";
+        String sql = "SELECT id, email, password_hash, fecha_registro, ultimo_acceso, " +
+                     "activo, usuario_id, username, rol_sistema FROM users WHERE id = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -75,31 +68,40 @@ public class UsuarioDAOImpl implements UsuarioDAO {
     }
 
     @Override
-    public boolean registrar(Usuario usuario) throws DatabaseException {
-        logger.info("Registrando nuevo usuario: {}", usuario.getEmail());
+    public Usuario registrar(Usuario usuario) throws DatabaseException {
+        logger.info("Registrando nuevo usuario en tabla 'users': {}", usuario.getEmail());
         
-        String sql = "INSERT INTO users (nombre, email, password_hash, telefono, activo) " +
-                     "VALUES (?, ?, ?, ?, true) RETURNING id";
+        String sql = "INSERT INTO users (email, password_hash, usuario_id, username, " +
+                     "rol_sistema, activo) " +
+                     "VALUES (?, ?, ?, ?, ?, true) RETURNING id";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            stmt.setString(1, usuario.getNombre());
-            stmt.setString(2, usuario.getEmail());
-            stmt.setString(3, usuario.getPasswordHash());
-            stmt.setString(4, usuario.getTelefono());
+            stmt.setString(1, usuario.getEmail());
+            stmt.setString(2, usuario.getPasswordHash());
+            
+            // usuario_id (FK a tabla usuarios)
+            if (usuario.getUsuarioId() != null) {
+                stmt.setLong(3, usuario.getUsuarioId());
+            } else {
+                stmt.setNull(3, Types.BIGINT);
+            }
+            
+            stmt.setString(4, usuario.getUsername());
+            stmt.setString(5, usuario.getRolSistema());
             
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    int id = rs.getInt("id");
+                    Integer id = rs.getInt("id");
                     usuario.setId(id);
-                    logger.info("✓ Usuario registrado exitosamente: {} (ID: {})", 
+                    logger.info("✓ Usuario registrado en 'users' exitosamente: {} (ID: {})", 
                             usuario.getEmail(), id);
-                    return true;
+                    return usuario;
                 }
             }
             
-            return false;
+            throw new DatabaseException("No se pudo registrar el usuario en 'users'");
             
         } catch (SQLException e) {
             logger.error("Error al registrar usuario: {}", usuario.getEmail(), e);
@@ -111,15 +113,14 @@ public class UsuarioDAOImpl implements UsuarioDAO {
     public boolean actualizar(Usuario usuario) throws DatabaseException {
         logger.info("Actualizando usuario: {}", usuario.getEmail());
         
-        String sql = "UPDATE users SET nombre = ?, telefono = ?, " +
-                     "ultimo_acceso = CURRENT_TIMESTAMP " +
-                     "WHERE id = ?";
+        String sql = "UPDATE users SET username = ?, ultimo_acceso = CURRENT_TIMESTAMP, " +
+                     "rol_sistema = ? WHERE id = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
-            stmt.setString(1, usuario.getNombre());
-            stmt.setString(2, usuario.getTelefono());
+            stmt.setString(1, usuario.getUsername());
+            stmt.setString(2, usuario.getRolSistema());
             stmt.setInt(3, usuario.getId());
             
             int rowsAffected = stmt.executeUpdate();
@@ -141,7 +142,6 @@ public class UsuarioDAOImpl implements UsuarioDAO {
     public boolean eliminar(Integer id) throws DatabaseException {
         logger.info("Eliminando usuario ID: {}", id);
         
-        // Eliminación lógica (marcar como inactivo)
         String sql = "UPDATE users SET activo = false WHERE id = ?";
         
         try (Connection conn = DatabaseConnection.getConnection();
@@ -188,19 +188,19 @@ public class UsuarioDAOImpl implements UsuarioDAO {
         }
     }
 
-    /**
-     * Mapea un ResultSet a un objeto Usuario.
-     */
     private Usuario mapResultSetToUsuario(ResultSet rs) throws SQLException {
         Usuario usuario = new Usuario();
         usuario.setId(rs.getInt("id"));
-        usuario.setNombre(rs.getString("nombre"));
         usuario.setEmail(rs.getString("email"));
         usuario.setPasswordHash(rs.getString("password_hash"));
-        usuario.setTelefono(rs.getString("telefono"));
         usuario.setActivo(rs.getBoolean("activo"));
         
-        // Timestamps (pueden ser null)
+        Long usuarioId = (Long) rs.getObject("usuario_id");
+        usuario.setUsuarioId(usuarioId);
+        
+        usuario.setUsername(rs.getString("username"));
+        usuario.setRolSistema(rs.getString("rol_sistema"));
+        
         Timestamp fechaReg = rs.getTimestamp("fecha_registro");
         if (fechaReg != null) {
             usuario.setFechaRegistro(fechaReg.toLocalDateTime());

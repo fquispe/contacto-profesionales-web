@@ -10,6 +10,11 @@ import com.contactoprofesionales.model.Usuario;
 import com.contactoprofesionales.service.auth.AutenticacionService;
 import com.contactoprofesionales.service.auth.AutenticacionServiceImpl;
 import com.contactoprofesionales.util.PasswordHasher;
+import com.contactoprofesionales.dao.usuariopersona.UsuarioPersonaDAO;
+import com.contactoprofesionales.dao.usuariopersona.UsuarioPersonaDAOImpl;
+import com.contactoprofesionales.model.UsuarioPersona;
+import java.util.Map;
+import java.util.HashMap;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.slf4j.Logger;
@@ -192,23 +197,45 @@ public class RegistroServlet extends HttpServlet {
             PasswordHasher hasher = new PasswordHasher();
             String passwordHash = hasher.hash(passwordPlano);
 
-            // Crear objeto Usuario
+            // PASO 1: Crear registro en tabla 'usuarios' (UsuarioPersona)
+            UsuarioPersona usuarioPersona = new UsuarioPersona();
+            usuarioPersona.setNombreCompleto(nombre);
+            usuarioPersona.setTelefono(telefono);
+            usuarioPersona.setTipoRol("CLIENTE");
+            usuarioPersona.setEsCliente(true);
+            usuarioPersona.setEsProfesional(false);
+            usuarioPersona.setActivo(true);
+
+            // Usar UsuarioPersonaDAO para registrar
+            UsuarioPersonaDAO usuarioPersonaDAO = new UsuarioPersonaDAOImpl();
+            UsuarioPersona personaCreada = usuarioPersonaDAO.registrar(usuarioPersona);
+
+            // PASO 2: Crear registro en tabla 'users' (Usuario)
             Usuario usuario = new Usuario();
-            usuario.setNombre(nombre);
             usuario.setEmail(email);
             usuario.setPasswordHash(passwordHash);
-            usuario.setTelefono(telefono);
+            usuario.setUsuarioId(personaCreada.getId()); // FK a tabla usuarios
+            usuario.setUsername(email.split("@")[0]);
+            usuario.setRolSistema("USER");
             usuario.setActivo(true);
-            usuario.setFechaRegistro(LocalDateTime.now());
 
             // Registrar en la base de datos
-            boolean registrado = usuarioDAO.registrar(usuario);
+            Usuario usuarioCreado = usuarioDAO.registrar(usuario);
 
-            if (registrado) {
+            if (usuarioCreado != null && usuarioCreado.getId() != null) {
+                // Preparar respuesta con datos combinados
+                Map<String, Object> responseData = new HashMap<>();
+                responseData.put("userId", usuarioCreado.getId());
+                responseData.put("usuarioPersonaId", personaCreada.getId());
+                responseData.put("email", usuarioCreado.getEmail());
+                responseData.put("nombreCompleto", personaCreada.getNombreCompleto());
+                responseData.put("telefono", personaCreada.getTelefono());
+                responseData.put("tipoRol", personaCreada.getTipoRol());
+
                 jsonResponse.addProperty("success", true);
                 jsonResponse.addProperty("message", "Usuario registrado exitosamente");
-                jsonResponse.add("data", gson.toJsonTree(usuario));
-                response.setStatus(HttpServletResponse.SC_OK);
+                jsonResponse.add("data", gson.toJsonTree(responseData));
+                response.setStatus(HttpServletResponse.SC_CREATED);
                 logger.info("Usuario registrado (flujo simple): {}", email);
             } else {
                 jsonResponse.addProperty("success", false);

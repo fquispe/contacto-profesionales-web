@@ -1,51 +1,38 @@
 package com.contactoprofesionales.dto;
 
-/**
- * DTO para transferir datos de usuario (sin información sensible).
- */
-public class UsuarioDTO {
+public class UsuarioDatosCompletosDTO {
+    // Datos de User
     private Integer id;
-    private String nombre;
     private String email;
-    private String telefono;
-    private boolean activo;
+    private String username;
+    private Boolean activo;
     
-    // NUEVOS CAMPOS PARA ROLES
+    // Datos de UsuarioPersona
     private Long usuarioPersonaId;
     private String nombreCompleto;
+    private String telefono;
+    private String tipoDocumento;
+    private String numeroDocumento;
+    
+    // Gestión de roles
     private String tipoRol;
     private Boolean esCliente;
     private Boolean esProfesional;
+    
+    // IDs de perfiles
     private Long clienteId;
     private Integer profesionalId;
-
-    public UsuarioDTO() {
-    }
-
-    // Constructor original (para compatibilidad)
-    public UsuarioDTO(Integer id, String nombre, String email, String telefono, boolean activo) {
-        this.id = id;
-        this.nombre = nombre;
-        this.email = email;
-        this.telefono = telefono;
-        this.activo = activo;
-    }
-
-    // Getters y Setters originales
+    
+    // Constructores
+    public UsuarioDatosCompletosDTO() {}
+    
+    // Getters y Setters
     public Integer getId() {
         return id;
     }
 
     public void setId(Integer id) {
         this.id = id;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
     }
 
     public String getEmail() {
@@ -56,23 +43,22 @@ public class UsuarioDTO {
         this.email = email;
     }
 
-    public String getTelefono() {
-        return telefono;
+    public String getUsername() {
+        return username;
     }
 
-    public void setTelefono(String telefono) {
-        this.telefono = telefono;
+    public void setUsername(String username) {
+        this.username = username;
     }
 
-    public boolean isActivo() {
+    public Boolean getActivo() {
         return activo;
     }
 
-    public void setActivo(boolean activo) {
+    public void setActivo(Boolean activo) {
         this.activo = activo;
     }
 
-    // NUEVOS GETTERS Y SETTERS
     public Long getUsuarioPersonaId() {
         return usuarioPersonaId;
     }
@@ -87,6 +73,30 @@ public class UsuarioDTO {
 
     public void setNombreCompleto(String nombreCompleto) {
         this.nombreCompleto = nombreCompleto;
+    }
+
+    public String getTelefono() {
+        return telefono;
+    }
+
+    public void setTelefono(String telefono) {
+        this.telefono = telefono;
+    }
+
+    public String getTipoDocumento() {
+        return tipoDocumento;
+    }
+
+    public void setTipoDocumento(String tipoDocumento) {
+        this.tipoDocumento = tipoDocumento;
+    }
+
+    public String getNumeroDocumento() {
+        return numeroDocumento;
+    }
+
+    public void setNumeroDocumento(String numeroDocumento) {
+        this.numeroDocumento = numeroDocumento;
     }
 
     public String getTipoRol() {

@@ -25,7 +25,7 @@ public interface UsuarioDAO {
     /**
      * Registra un nuevo usuario.
      */
-    boolean registrar(Usuario usuario) throws DatabaseException;
+    Usuario registrar(Usuario usuario) throws DatabaseException;
     
     /**
      * Actualiza un usuario existente.

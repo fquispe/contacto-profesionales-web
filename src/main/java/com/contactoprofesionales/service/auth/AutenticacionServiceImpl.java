@@ -61,7 +61,7 @@ public class AutenticacionServiceImpl implements AutenticacionService {
             throw new AuthenticationException("Credenciales inválidas");
         }
         
-        if (!usuario.isActivo()) {
+        if (!usuario.getActivo()) {
             logger.warn("✗ Usuario inactivo: {}", email);
             throw new AuthenticationException("Usuario inactivo. Contacte al administrador");
         }
@@ -86,8 +86,17 @@ public class AutenticacionServiceImpl implements AutenticacionService {
         
         logger.info("Registrando nuevo usuario: {}", usuario.getEmail());
         
-        // Validar datos
-        validarDatosUsuario(usuario);
+        // Validar datos básicos
+        
+        
+        if (usuario.getEmail() == null || usuario.getEmail().trim().isEmpty()) {
+            throw new AuthenticationException("El email es requerido");
+        }
+        
+        // Validar formato de email
+        if (!usuario.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            throw new AuthenticationException("Formato de email inválido");
+        }
         
         // Verificar que el email no exista
         if (usuarioDAO.existeEmail(usuario.getEmail())) {
@@ -95,20 +104,21 @@ public class AutenticacionServiceImpl implements AutenticacionService {
             throw new AuthenticationException("El email ya está registrado");
         }
         
-        // Hashear contraseña
-        String passwordHash = passwordHasher.hash(usuario.getPasswordHash()); // En registro, viene en texto plano
-        usuario.setPasswordHash(passwordHash);
+        // Validar que tenga password hash
+        if (usuario.getPasswordHash() == null || usuario.getPasswordHash().isEmpty()) {
+            throw new AuthenticationException("La contraseña es requerida");
+        }
         
         // Registrar en BD
-        boolean registrado = usuarioDAO.registrar(usuario);
+        Usuario usuarioCreado = usuarioDAO.registrar(usuario);
         
-        if (!registrado) {
+        if (usuarioCreado == null || usuarioCreado.getId() == null) {
             throw new DatabaseException("Error al registrar usuario");
         }
         
         logger.info("✓ Usuario registrado exitosamente: {}", usuario.getEmail());
         
-        return usuario;
+        return usuarioCreado;
     }
 
     @Override
@@ -133,12 +143,19 @@ public class AutenticacionServiceImpl implements AutenticacionService {
      * Valida todos los datos del usuario para registro.
      */
     private void validarDatosUsuario(Usuario usuario) throws AuthenticationException {
+                
+        // Validar datos básicos
         if (usuario == null) {
             throw new AuthenticationException("Usuario nulo");
         }
         
-        if (usuario.getNombre() == null || usuario.getNombre().trim().isEmpty()) {
-            throw new AuthenticationException("El nombre es requerido");
+        if (usuario.getEmail() == null || usuario.getEmail().trim().isEmpty()) {
+            throw new AuthenticationException("El email es requerido");
+        }
+        
+        // Validar formato de email
+        if (!usuario.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            throw new AuthenticationException("Formato de email inválido");
         }
         
         validarCredenciales(usuario.getEmail(), usuario.getPasswordHash());
@@ -205,13 +222,13 @@ public class AutenticacionServiceImpl implements AutenticacionService {
                 }
             }
 
-            // 7. CREAR Usuario en tabla users
-            Integer userId = crearUsuario(conn, request);
-            logger.info("Usuario creado en tabla 'users' con ID: {}", userId);
-
-            // 8. CREAR UsuarioPersona en tabla usuarios
+            // 7. CREAR UsuarioPersona en tabla usuarios PRIMERO
             Long usuarioPersonaId = crearUsuarioPersona(conn, request, esCliente, esProfesional);
             logger.info("UsuarioPersona creado en tabla 'usuarios' con ID: {}", usuarioPersonaId);
+
+            // 8. CREAR Usuario en tabla users (ahora con el usuarioPersonaId)
+            Integer userId = crearUsuario(conn, request, usuarioPersonaId);
+            logger.info("Usuario creado en tabla 'users' con ID: {}", userId);
 
             // Variables para IDs de cliente y profesional
             Long clienteId = null;
@@ -219,7 +236,7 @@ public class AutenticacionServiceImpl implements AutenticacionService {
 
             // 9. SI esCliente = true: Crear registro en tabla clientes
             if (esCliente) {
-                clienteId = crearCliente(conn, usuarioPersonaId, request);
+                clienteId = crearCliente(conn, userId, request); // ← Cambiar usuarioPersonaId por userId
                 logger.info("Cliente creado en tabla 'clientes' con ID: {}", clienteId);
             }
 
@@ -404,26 +421,33 @@ public class AutenticacionServiceImpl implements AutenticacionService {
     }
 
     /**
-     * Crea un usuario en la tabla users
+     * Crea un usuario en la tabla users con referencia a usuarioPersona
      */
-    private Integer crearUsuario(Connection conn, RegistroCompletoRequest request) throws SQLException {
-        String sql = "INSERT INTO users (email, password_hash, nombre, telefono, activo) " +
-                     "VALUES (?, ?, ?, ?, true) RETURNING id";
-
+    private Integer crearUsuario(Connection conn, RegistroCompletoRequest request, Long usuarioPersonaId) 
+            throws SQLException {
+        
+        // Hashear la contraseña
+        String passwordHash = passwordHasher.hash(request.getPassword());
+        
+        String sql = "INSERT INTO users (email, password_hash, usuario_id, username, " +
+                     "rol_sistema, activo) " +
+                     "VALUES (?, ?, ?, ?, ?, true) RETURNING id";
+        
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, request.getEmail());
-            stmt.setString(2, passwordHasher.hash(request.getPassword()));
-            stmt.setString(3, request.getUsername() != null ? request.getUsername() : request.getEmail());
-            stmt.setString(4, request.getTelefono());
-
+            stmt.setString(2, passwordHash);
+            stmt.setLong(3, usuarioPersonaId);
+            stmt.setString(4, request.getEmail().split("@")[0]);
+            stmt.setString(5, "USER"); // Rol por defecto
+            
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
                     return rs.getInt("id");
                 }
             }
         }
-
-        throw new SQLException("No se pudo crear el usuario en la tabla users");
+        
+        throw new SQLException("No se pudo crear el usuario en 'users'");
     }
 
     /**
@@ -485,24 +509,38 @@ public class AutenticacionServiceImpl implements AutenticacionService {
     /**
      * Crea un cliente en la tabla clientes vinculado con usuarioPersona
      */
-    private Long crearCliente(Connection conn, Long usuarioPersonaId, RegistroCompletoRequest request)
+    private Long crearCliente(Connection conn, Integer userId, RegistroCompletoRequest request)
             throws SQLException {
 
-        String sql = "INSERT INTO clientes (usuario_persona_id, nombre_completo, email, telefono, " +
+        String sql = "INSERT INTO clientes (usuario_id, radio_busqueda, presupuesto_promedio, " +
                      "notificaciones_email, notificaciones_push, notificaciones_promociones, notificaciones_resenas, " +
                      "perfil_visible, compartir_ubicacion, historial_publico, " +
-                     "fecha_registro, fecha_actualizacion, activo) " +
-                     "VALUES (?, ?, ?, ?, false, false, false, false, true, false, false, ?, ?, true) RETURNING id";
+                     "fecha_registro, fecha_actualizacion, activo, cliente_verificado) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             Timestamp ahora = Timestamp.valueOf(LocalDateTime.now());
 
-            stmt.setLong(1, usuarioPersonaId);
-            stmt.setString(2, request.getNombreCompleto());
-            stmt.setString(3, request.getEmail());
-            stmt.setString(4, request.getTelefono());
-            stmt.setTimestamp(5, ahora);
-            stmt.setTimestamp(6, ahora);
+            stmt.setInt(1, userId); // usuario_id (FK a users)
+            stmt.setInt(2, 10); // radio_busqueda por defecto (10 km)
+            stmt.setBigDecimal(3, null); // presupuesto_promedio (null por defecto)
+            
+            // Notificaciones (todas en false por defecto)
+            stmt.setBoolean(4, false); // notificaciones_email
+            stmt.setBoolean(5, false); // notificaciones_push
+            stmt.setBoolean(6, false); // notificaciones_promociones
+            stmt.setBoolean(7, false); // notificaciones_resenas
+            
+            // Privacidad
+            stmt.setBoolean(8, true);  // perfil_visible
+            stmt.setBoolean(9, false); // compartir_ubicacion
+            stmt.setBoolean(10, false); // historial_publico
+            
+            // Auditoría
+            stmt.setTimestamp(11, ahora); // fecha_registro
+            stmt.setTimestamp(12, ahora); // fecha_actualizacion
+            stmt.setBoolean(13, true);    // activo
+            stmt.setBoolean(14, false);   // cliente_verificado
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
@@ -520,16 +558,30 @@ public class AutenticacionServiceImpl implements AutenticacionService {
     private Integer crearProfesional(Connection conn, Integer userId, RegistroCompletoRequest request)
             throws SQLException {
 
-        String sql = "INSERT INTO profesionales (usuario_id, especialidad, descripcion, " +
-                     "disponibilidad, radio_servicio, activo) " +
-                     "VALUES (?, ?, ?, ?, ?, true) RETURNING id";
+        String sql = "INSERT INTO profesionales (usuario_id, descripcion, " +
+                     "radio_servicio, disponibilidad, verificado, disponible, " +
+                     "fecha_registro, ultima_actualizacion, activo, " +
+                     "verificacion_identidad, certificado_antecedentes, total_resenas, " +
+                     "calificacion_promedio, anios_experiencia) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.setInt(1, userId);
-            stmt.setString(2, "Por definir"); // Especialidad por defecto
-            stmt.setString(3, "Perfil profesional en construcción"); // Descripción por defecto
-            stmt.setString(4, "Por definir"); // Disponibilidad por defecto
-            stmt.setInt(5, 10); // Radio de servicio por defecto 10 km
+            Timestamp ahora = Timestamp.valueOf(LocalDateTime.now());
+
+            stmt.setInt(1, userId);                                          // usuario_id
+            stmt.setString(2, "Perfil profesional en construcción");        // descripcion
+            stmt.setInt(3, 10);                                              // radio_servicio (10 km por defecto)
+            stmt.setString(4, "Por definir");                                // disponibilidad
+            stmt.setBoolean(5, false);                                       // verificado
+            stmt.setBoolean(6, true);                                        // disponible
+            stmt.setTimestamp(7, ahora);                                     // fecha_registro
+            stmt.setTimestamp(8, ahora);                                     // ultima_actualizacion
+            stmt.setBoolean(9, true);                                        // activo
+            stmt.setBoolean(10, false);                                      // verificacion_identidad
+            stmt.setBoolean(11, false);                                      // certificado_antecedentes
+            stmt.setInt(12, 0);                                              // total_resenas
+            stmt.setBigDecimal(13, new java.math.BigDecimal("0.0"));        // calificacion_promedio
+            stmt.setInt(14, 0);                                              // anios_experiencia
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {

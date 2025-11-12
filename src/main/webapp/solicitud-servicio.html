@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Agregar en el <head> o antes del cierre de </body> -->
+	<script src="assets/js/ubicacion-api.js"></script>
     <title>Solicitar Servicio - ServiciosPro</title>
     <style>
         * {
@@ -1802,7 +1804,76 @@
 		    window.location.href = '/ContactoProfesionalesWeb/dashboard.html';
 		}
 		
+		//#### 3.2. Auto-cargar ubicación del cliente
+		
+		async function cargarUbicacionCliente() {
+		    try {
+		        // Obtener ID del cliente desde sessionStorage
+		        const userData = JSON.parse(sessionStorage.getItem('userData'));
+		        const clienteId = userData.clienteId;
+
+		        if (!clienteId) {
+		            console.warn('Usuario no tiene perfil de cliente');
+		            return;
+		        }
+
+		        // Obtener datos del cliente con ubicación
+		        const response = await fetch(`/ContactoProfesionalesWeb/api/clientes/${clienteId}`);
+		        const data = await response.json();
+
+		        if (data.success && data.data.distritoId) {
+		            const cliente = data.data;
+
+		            // Pre-llenar los campos de ubicación
+		            await precargarUbicacion(cliente.distritoId);
+
+		            // Opcional: Marcar campos como solo lectura o mostrar mensaje
+		            mostrarMensajeUbicacionPrecargada(cliente.direccion);
+		        }
+		    } catch (error) {
+		        console.error('Error al cargar ubicación del cliente:', error);
+		    }
+		}
+
+		async function precargarUbicacion(distritoId) {
+		    // Aquí necesitas hacer reverse lookup:
+		    // distritoId -> distrito -> provincia -> departamento
+
+		    // Opción 1: Agregar endpoint en backend GET /api/ubicacion/distrito/{id}/jerarquia
+		    const response = await fetch(`/ContactoProfesionalesWeb/api/ubicacion/distrito/${distritoId}/jerarquia`);
+		    const data = await response.json();
+
+		    if (data.success) {
+		        const { departamento, provincia, distrito } = data.data;
+
+		        // Cargar departamentos
+		        const selectDepartamento = document.getElementById('departamento');
+		        await ubicacionAPI.popularDepartamentos(selectDepartamento);
+		        selectDepartamento.value = departamento.id;
+
+		        // Cargar provincias
+		        const selectProvincia = document.getElementById('provincia');
+		        await ubicacionAPI.popularProvincias(selectProvincia, departamento.id);
+		        selectProvincia.value = provincia.id;
+
+		        // Cargar distritos
+		        const selectDistrito = document.getElementById('distrito');
+		        await ubicacionAPI.popularDistritos(selectDistrito, provincia.id);
+		        selectDistrito.value = distrito.id;
+		    }
+		}
+
+		function mostrarMensajeUbicacionPrecargada(direccion) {
+		    const mensaje = `
+		        <div class="alert alert-info">
+		            ℹ️ Se ha cargado automáticamente tu ubicación registrada: <strong>${direccion}</strong>
+		        </div>
+		    `;
+		    document.querySelector('.ubicacion-container').insertAdjacentHTML('afterbegin', mensaje);
+		}
+		
 		console.log('✅ Script cargado completamente');
+		
     </script>
 </body>
 </html>
