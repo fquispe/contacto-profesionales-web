@@ -6,10 +6,11 @@
 
 -- Tabla: especialidades_profesional
 -- Descripción: Almacena hasta 3 especialidades por profesional, destacando una como principal
+-- MODIFICADA: Usa categoria_id de la tabla categorias_servicio existente
 CREATE TABLE IF NOT EXISTS especialidades_profesional (
     id SERIAL PRIMARY KEY,
     profesional_id INTEGER NOT NULL,
-    nombre_especialidad VARCHAR(200) NOT NULL,
+    categoria_id INTEGER NOT NULL,
     descripcion TEXT,
     incluye_materiales BOOLEAN DEFAULT FALSE,
     costo DECIMAL(10, 2) NOT NULL,
@@ -21,7 +22,10 @@ CREATE TABLE IF NOT EXISTS especialidades_profesional (
     activo BOOLEAN DEFAULT TRUE,
     CONSTRAINT fk_especialidad_profesional FOREIGN KEY (profesional_id)
         REFERENCES profesionales(id) ON DELETE CASCADE,
+    CONSTRAINT fk_especialidad_categoria FOREIGN KEY (categoria_id)
+        REFERENCES categorias_servicio(id) ON DELETE RESTRICT,
     CONSTRAINT uq_profesional_orden UNIQUE (profesional_id, orden),
+    CONSTRAINT uq_profesional_categoria UNIQUE (profesional_id, categoria_id),
     CONSTRAINT chk_max_especialidades CHECK (
         (SELECT COUNT(*) FROM especialidades_profesional
          WHERE profesional_id = especialidades_profesional.profesional_id
@@ -31,11 +35,14 @@ CREATE TABLE IF NOT EXISTS especialidades_profesional (
 
 -- Índices para especialidades_profesional
 CREATE INDEX idx_especialidades_profesional_id ON especialidades_profesional(profesional_id);
+CREATE INDEX idx_especialidades_categoria_id ON especialidades_profesional(categoria_id);
 CREATE INDEX idx_especialidades_principal ON especialidades_profesional(profesional_id, es_principal)
     WHERE es_principal = TRUE;
 
 -- Comentarios
-COMMENT ON TABLE especialidades_profesional IS 'Especialidades del profesional (máximo 3, con una principal)';
+COMMENT ON TABLE especialidades_profesional IS 'Especialidades del profesional (máximo 3, con una principal). Usa categorias_servicio.';
+COMMENT ON COLUMN especialidades_profesional.categoria_id IS 'FK a categorias_servicio - Define la categoría/especialidad';
+COMMENT ON COLUMN especialidades_profesional.descripcion IS 'Descripción personalizada del servicio por el profesional';
 COMMENT ON COLUMN especialidades_profesional.es_principal IS 'Indica si es la especialidad principal del profesional';
 COMMENT ON COLUMN especialidades_profesional.incluye_materiales IS 'Indica si el servicio incluye materiales';
 COMMENT ON COLUMN especialidades_profesional.tipo_costo IS 'Tipo de tarifa: hora, dia o mes';

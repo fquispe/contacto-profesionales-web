@@ -11,7 +11,8 @@ const appState = {
     horarios: [],
     todoPais: false,
     todoTiempo: false,
-    modoEdicion: false
+    modoEdicion: false,
+    categoriasServicio: [] // NUEVO: Almacena las categorías de servicio
 };
 
 // Datos de referencia
@@ -46,6 +47,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Configurar event listeners
     configurarEventListeners();
 
+    // NUEVO: Cargar categorías de servicio primero
+    await cargarCategoriasServicio();
+
     // Cargar datos existentes si los hay
     await cargarDatosExistentes();
 
@@ -71,6 +75,28 @@ function configurarEventListeners() {
 
     // Formulario
     document.getElementById('serviciosProfesionalForm').addEventListener('submit', enviarFormulario);
+}
+
+// =====================================================================
+// CARGAR CATEGORÍAS DE SERVICIO
+// =====================================================================
+
+async function cargarCategoriasServicio() {
+    try {
+        const response = await fetch('./api/categorias-servicio');
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            appState.categoriasServicio = data.data;
+            console.log(`Cargadas ${appState.categoriasServicio.length} categorías de servicio`);
+        } else {
+            console.error('Error cargando categorías:', data.error);
+            mostrarAlerta('error', 'No se pudieron cargar las categorías de servicio');
+        }
+    } catch (error) {
+        console.error('Error cargando categorías:', error);
+        mostrarAlerta('error', 'Error de conexión al cargar categorías');
+    }
 }
 
 // =====================================================================
@@ -150,7 +176,8 @@ function agregarEspecialidad(datosExistentes = null) {
 
     const especialidad = {
         orden: index + 1,
-        nombreEspecialidad: datosExistentes?.nombreEspecialidad || '',
+        categoriaId: datosExistentes?.categoriaId || (appState.categoriasServicio.length > 0 ? appState.categoriasServicio[0].id : ''),
+        nombreCategoria: datosExistentes?.nombreCategoria || '',
         descripcion: datosExistentes?.descripcion || '',
         incluyeMateriales: datosExistentes?.incluyeMateriales || false,
         costo: datosExistentes?.costo || '',
@@ -213,12 +240,15 @@ function renderizarEspecialidades() {
             </div>
 
             <div class="form-group">
-                <label class="required">Nombre de la Especialidad</label>
-                <input type="text" class="form-input"
-                       value="${esp.nombreEspecialidad}"
-                       onchange="actualizarEspecialidad(${index}, 'nombreEspecialidad', this.value)"
-                       placeholder="Ej: Electricidad Residencial, Plomería, Carpintería..."
-                       required>
+                <label class="required">Categoría de Servicio</label>
+                <select class="form-select"
+                        onchange="actualizarEspecialidad(${index}, 'categoriaId', parseInt(this.value)); actualizarNombreCategoria(${index}, this.options[this.selectedIndex].text);"
+                        required>
+                    <option value="">Seleccione una categoría...</option>
+                    ${appState.categoriasServicio.map(cat =>
+                        `<option value="${cat.id}" ${cat.id === esp.categoriaId ? 'selected' : ''}>${cat.icono ? cat.icono + ' ' : ''}${cat.nombre}</option>`
+                    ).join('')}
+                </select>
             </div>
 
             <div class="form-group">
@@ -275,6 +305,14 @@ function renderizarEspecialidades() {
 function actualizarEspecialidad(index, campo, valor) {
     if (appState.especialidades[index]) {
         appState.especialidades[index][campo] = valor;
+    }
+}
+
+function actualizarNombreCategoria(index, nombreCompleto) {
+    if (appState.especialidades[index]) {
+        // Remover el icono si existe (viene como "🔧 Plomería")
+        const nombre = nombreCompleto.replace(/^[\u{1F300}-\u{1F9FF}]\s*/u, '').trim();
+        appState.especialidades[index]['nombreCategoria'] = nombre;
     }
 }
 
@@ -639,8 +677,8 @@ function validarFormulario() {
     for (let i = 0; i < appState.especialidades.length; i++) {
         const esp = appState.especialidades[i];
 
-        if (!esp.nombreEspecialidad || esp.nombreEspecialidad.trim() === '') {
-            mostrarAlerta('error', `La especialidad ${i + 1} debe tener un nombre`);
+        if (!esp.categoriaId || esp.categoriaId === '') {
+            mostrarAlerta('error', `La especialidad ${i + 1} debe tener una categoría seleccionada`);
             return false;
         }
 

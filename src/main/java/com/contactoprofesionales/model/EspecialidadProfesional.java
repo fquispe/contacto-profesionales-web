@@ -6,12 +6,13 @@ import java.time.LocalDateTime;
  * Modelo para representar una especialidad de un profesional.
  * Corresponde a la tabla 'especialidades_profesional' en la BD.
  * Un profesional puede tener hasta 3 especialidades, siendo una principal.
+ * MODIFICADO: Usa categoria_id de la tabla categorias_servicio.
  */
 public class EspecialidadProfesional {
 
     private Integer id;
     private Integer profesionalId;
-    private String nombreEspecialidad;
+    private Integer categoriaId; // FK a categorias_servicio
     private String descripcion;
     private Boolean incluyeMateriales;
     private Double costo;
@@ -22,6 +23,11 @@ public class EspecialidadProfesional {
     private LocalDateTime fechaActualizacion;
     private Boolean activo;
 
+    // Campos adicionales para JOINs (no están en la tabla)
+    private String nombreCategoria; // Nombre de la categoría (de categorias_servicio)
+    private String iconoCategoria; // Icono de la categoría
+    private String colorCategoria; // Color de la categoría
+
     // Constructores
     public EspecialidadProfesional() {
         this.fechaCreacion = LocalDateTime.now();
@@ -31,13 +37,13 @@ public class EspecialidadProfesional {
         this.incluyeMateriales = false;
     }
 
-    public EspecialidadProfesional(Integer profesionalId, String nombreEspecialidad,
+    public EspecialidadProfesional(Integer profesionalId, Integer categoriaId,
                                    String descripcion, Boolean incluyeMateriales,
                                    Double costo, String tipoCosto, Boolean esPrincipal,
                                    Integer orden) {
         this();
         this.profesionalId = profesionalId;
-        this.nombreEspecialidad = nombreEspecialidad;
+        this.categoriaId = categoriaId;
         this.descripcion = descripcion;
         this.incluyeMateriales = incluyeMateriales;
         this.costo = costo;
@@ -63,12 +69,36 @@ public class EspecialidadProfesional {
         this.profesionalId = profesionalId;
     }
 
-    public String getNombreEspecialidad() {
-        return nombreEspecialidad;
+    public Integer getCategoriaId() {
+        return categoriaId;
     }
 
-    public void setNombreEspecialidad(String nombreEspecialidad) {
-        this.nombreEspecialidad = nombreEspecialidad;
+    public void setCategoriaId(Integer categoriaId) {
+        this.categoriaId = categoriaId;
+    }
+
+    public String getNombreCategoria() {
+        return nombreCategoria;
+    }
+
+    public void setNombreCategoria(String nombreCategoria) {
+        this.nombreCategoria = nombreCategoria;
+    }
+
+    public String getIconoCategoria() {
+        return iconoCategoria;
+    }
+
+    public void setIconoCategoria(String iconoCategoria) {
+        this.iconoCategoria = iconoCategoria;
+    }
+
+    public String getColorCategoria() {
+        return colorCategoria;
+    }
+
+    public void setColorCategoria(String colorCategoria) {
+        this.colorCategoria = colorCategoria;
     }
 
     public String getDescripcion() {
@@ -145,7 +175,7 @@ public class EspecialidadProfesional {
 
     // Métodos de validación
     public boolean isValid() {
-        return nombreEspecialidad != null && !nombreEspecialidad.trim().isEmpty()
+        return categoriaId != null && categoriaId > 0
             && costo != null && costo > 0
             && tipoCosto != null && (tipoCosto.equals("hora") || tipoCosto.equals("dia") || tipoCosto.equals("mes"))
             && orden != null && orden >= 1 && orden <= 3;
@@ -156,7 +186,8 @@ public class EspecialidadProfesional {
         return "EspecialidadProfesional{" +
                 "id=" + id +
                 ", profesionalId=" + profesionalId +
-                ", nombreEspecialidad='" + nombreEspecialidad + '\'' +
+                ", categoriaId=" + categoriaId +
+                ", nombreCategoria='" + nombreCategoria + '\'' +
                 ", costo=" + costo +
                 ", tipoCosto='" + tipoCosto + '\'' +
                 ", esPrincipal=" + esPrincipal +

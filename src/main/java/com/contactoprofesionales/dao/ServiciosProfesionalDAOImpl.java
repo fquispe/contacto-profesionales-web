@@ -233,7 +233,7 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
                                                 List<EspecialidadProfesional> especialidades) throws SQLException {
 
         String sql = "INSERT INTO especialidades_profesional " +
-                    "(profesional_id, nombre_especialidad, descripcion, incluye_materiales, " +
+                    "(profesional_id, categoria_id, descripcion, incluye_materiales, " +
                     "costo, tipo_costo, es_principal, orden) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -242,7 +242,7 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
                 esp.setProfesionalId(profesionalId);
 
                 stmt.setInt(1, profesionalId);
-                stmt.setString(2, esp.getNombreEspecialidad());
+                stmt.setInt(2, esp.getCategoriaId());
                 stmt.setString(3, esp.getDescripcion());
                 stmt.setBoolean(4, esp.getIncluyeMateriales());
                 stmt.setDouble(5, esp.getCosto());
@@ -264,9 +264,11 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
 
     @Override
     public List<EspecialidadProfesional> obtenerEspecialidadesPorProfesional(Integer profesionalId) throws Exception {
-        String sql = "SELECT * FROM especialidades_profesional " +
-                    "WHERE profesional_id = ? AND activo = TRUE " +
-                    "ORDER BY orden ASC";
+        String sql = "SELECT ep.*, cs.nombre as categoria_nombre, cs.icono as categoria_icono, cs.color as categoria_color " +
+                    "FROM especialidades_profesional ep " +
+                    "INNER JOIN categorias_servicio cs ON cs.id = ep.categoria_id " +
+                    "WHERE ep.profesional_id = ? AND ep.activo = TRUE " +
+                    "ORDER BY ep.orden ASC";
 
         List<EspecialidadProfesional> especialidades = new ArrayList<>();
 
@@ -309,7 +311,7 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
         EspecialidadProfesional esp = new EspecialidadProfesional();
         esp.setId(rs.getInt("id"));
         esp.setProfesionalId(rs.getInt("profesional_id"));
-        esp.setNombreEspecialidad(rs.getString("nombre_especialidad"));
+        esp.setCategoriaId(rs.getInt("categoria_id"));
         esp.setDescripcion(rs.getString("descripcion"));
         esp.setIncluyeMateriales(rs.getBoolean("incluye_materiales"));
         esp.setCosto(rs.getDouble("costo"));
@@ -319,6 +321,16 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
         esp.setFechaCreacion(rs.getTimestamp("fecha_creacion").toLocalDateTime());
         esp.setFechaActualizacion(rs.getTimestamp("fecha_actualizacion").toLocalDateTime());
         esp.setActivo(rs.getBoolean("activo"));
+
+        // Datos del JOIN con categorias_servicio (si existen en el ResultSet)
+        try {
+            esp.setNombreCategoria(rs.getString("categoria_nombre"));
+            esp.setIconoCategoria(rs.getString("categoria_icono"));
+            esp.setColorCategoria(rs.getString("categoria_color"));
+        } catch (SQLException e) {
+            // Las columnas del JOIN no están presentes, ignorar
+        }
+
         return esp;
     }
 

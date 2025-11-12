@@ -309,7 +309,7 @@ public class ServiciosProfesionalServlet extends HttpServlet {
 
             EspecialidadProfesional esp = new EspecialidadProfesional();
             esp.setProfesionalId(profesionalId);
-            esp.setNombreEspecialidad(espJson.get("nombreEspecialidad").getAsString());
+            esp.setCategoriaId(espJson.get("categoriaId").getAsInt());
             esp.setDescripcion(espJson.has("descripcion") ? espJson.get("descripcion").getAsString() : "");
             esp.setIncluyeMateriales(espJson.has("incluyeMateriales") && espJson.get("incluyeMateriales").getAsBoolean());
             esp.setCosto(espJson.get("costo").getAsDouble());
