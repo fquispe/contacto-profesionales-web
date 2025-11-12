@@ -326,7 +326,9 @@
         }
 
         .custom-checkbox {
+            display: inline-block;
             position: relative;
+            vertical-align: middle;
             width: 20px;
             height: 20px;
         }
@@ -707,10 +709,10 @@
 
             <div class="login-options">
                 <label class="remember-me">
-                    <div class="custom-checkbox">
+                    <span class="custom-checkbox">
                         <input type="checkbox" id="rememberMe" name="rememberMe">
                         <span class="checkbox-mark"></span>
-                    </div>
+                    </span>
                     <span class="remember-label">Recordarme</span>
                 </label>
                 <a href="#" class="forgot-password" onclick="handleForgotPassword(event)">¿Olvidaste tu contraseña?</a>

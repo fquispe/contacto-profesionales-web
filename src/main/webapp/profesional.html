@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Agregar en el <head> o antes del cierre de </body> -->
+	<script src="assets/js/especialidad-api.js"></script>
+	<script src="assets/js/red-social-api.js"></script>
+	<script src="assets/js/categoria-api.js"></script>
     <title>Perfil Profesional - ServiciosPro</title>
     <style>
         * {
@@ -417,6 +421,88 @@
                 text-align: left;
             }
         }
+        
+        /* Estilos para especialidades */
+		.especialidades-container {
+		    display: grid;
+		    gap: 15px;
+		    margin-top: 20px;
+		}
+		
+		.especialidad-item {
+		    background: white;
+		    border: 2px solid #e9ecef;
+		    border-radius: 12px;
+		    padding: 20px;
+		    display: flex;
+		    justify-content: space-between;
+		    align-items: center;
+		    transition: all 0.3s ease;
+		}
+		
+		.especialidad-item.principal {
+		    border-color: var(--primary-color);
+		    background: linear-gradient(to right, rgba(102, 126, 234, 0.05), white);
+		}
+		
+		.especialidad-item:hover {
+		    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+		    transform: translateY(-2px);
+		}
+		
+		/* Estilos para redes sociales */
+		.redes-container {
+		    display: grid;
+		    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+		    gap: 15px;
+		    margin-top: 20px;
+		}
+		
+		.red-social-item {
+		    background: white;
+		    border: 2px solid #e9ecef;
+		    border-radius: 12px;
+		    padding: 15px;
+		    transition: all 0.3s ease;
+		}
+		
+		.red-icono {
+		    font-size: 32px;
+		    margin-bottom: 10px;
+		    display: block;
+		}
+		
+		.red-url {
+		    color: var(--primary-color);
+		    text-decoration: none;
+		    word-break: break-all;
+		    font-size: 14px;
+		}
+		
+		/* Modal styles */
+		.modal {
+		    position: fixed;
+		    top: 0;
+		    left: 0;
+		    width: 100%;
+		    height: 100%;
+		    background: rgba(0,0,0,0.5);
+		    display: flex;
+		    align-items: center;
+		    justify-content: center;
+		    z-index: 1000;
+		}
+		
+		.modal-content {
+		    background: white;
+		    border-radius: 16px;
+		    padding: 30px;
+		    max-width: 500px;
+		    width: 90%;
+		    max-height: 90vh;
+		    overflow-y: auto;
+		}
+        
     </style>
 </head>
 <body>
@@ -591,6 +677,11 @@
         </div>
     </div>
 
+    <!-- APIs JavaScript -->
+    <script src="assets/js/categoria-api.js"></script>
+    <script src="assets/js/especialidad-api.js"></script>
+    <script src="assets/js/red-social-api.js"></script>
+
     <script>
         // ============================================
         // VARIABLES GLOBALES
@@ -656,6 +747,12 @@
 
             showLoading(false);
             inicializarFormulario();
+
+            // TODO: Cargar especialidades y redes sociales del profesional
+            // if (profesionalId) {
+            //     cargarEspecialidades();
+            //     cargarRedesSociales();
+            // }
         }
 
         // ============================================
@@ -958,6 +1055,171 @@
                 alert.style.display = 'none';
             }, 5000);
         }
+        
+        //#### 4.3. JavaScript para especialidades
+
+		let especialidades = [];
+		
+		// Al cargar la página
+		document.addEventListener('DOMContentLoaded', async function() {
+		    const userData = JSON.parse(sessionStorage.getItem('userData'));
+		    profesionalId = userData.profesionalId;
+		
+		    await cargarCategorias();
+		    await cargarEspecialidades();
+		});
+		
+		async function cargarCategorias() {
+		    try {
+		        const categorias = await categoriaAPI.listar();
+		        const select = document.getElementById('categoriaEspecialidad');
+		
+		        select.innerHTML = '<option value="">Selecciona una categoría</option>';
+		        categorias.forEach(cat => {
+		            select.innerHTML += `<option value="${cat.id}">${cat.nombre}</option>`;
+		        });
+		    } catch (error) {
+		        console.error('Error al cargar categorías:', error);
+		    }
+		}
+		
+		async function cargarEspecialidades() {
+		    try {
+		        especialidades = await especialidadAPI.listar(profesionalId);
+		
+		        const container = document.getElementById('especialidadesContainer');
+		        especialidadAPI.renderizar(container, especialidades, {
+		            onEliminar: eliminarEspecialidad,
+		            onMarcarPrincipal: marcarComoPrincipal
+		        });
+		
+		        // Habilitar/deshabilitar botón según límite
+		        const btnAgregar = document.getElementById('btnAgregarEspecialidad');
+		        if (!especialidadAPI.puedeAgregarMas(especialidades)) {
+		            btnAgregar.disabled = true;
+		            btnAgregar.textContent = '⚠️ Límite de 3 especialidades alcanzado';
+		        }
+		    } catch (error) {
+		        console.error('Error al cargar especialidades:', error);
+		    }
+		}
+		
+		async function agregarEspecialidad(event) {
+		    event.preventDefault();
+		
+		    const especialidadData = {
+		        categoriaId: parseInt(document.getElementById('categoriaEspecialidad').value),
+		        aniosExperiencia: parseInt(document.getElementById('aniosExperiencia').value) || 0,
+		        descripcion: document.getElementById('descripcionEspecialidad').value.trim(),
+		        esPrincipal: document.getElementById('esPrincipal').checked
+		    };
+		
+		    try {
+		        await especialidadAPI.agregar(profesionalId, especialidadData);
+		        await cargarEspecialidades(); // Recargar lista
+		        cerrarModalEspecialidad();
+		        mostrarAlerta('Especialidad agregada exitosamente', 'success');
+		    } catch (error) {
+		        mostrarAlerta('Error al agregar especialidad: ' + error.message, 'error');
+		    }
+		}
+		
+		async function eliminarEspecialidad(especialidadId) {
+		    if (!confirm('¿Estás seguro de eliminar esta especialidad?')) return;
+		
+		    try {
+		        await especialidadAPI.eliminar(profesionalId, especialidadId);
+		        await cargarEspecialidades();
+		        mostrarAlerta('Especialidad eliminada', 'success');
+		    } catch (error) {
+		        mostrarAlerta('Error al eliminar: ' + error.message, 'error');
+		    }
+		}
+		
+		async function marcarComoPrincipal(especialidadId) {
+		    try {
+		        await especialidadAPI.marcarComoPrincipal(profesionalId, especialidadId);
+		        await cargarEspecialidades();
+		        mostrarAlerta('Especialidad marcada como principal', 'success');
+		    } catch (error) {
+		        mostrarAlerta('Error: ' + error.message, 'error');
+		    }
+		}
+        
+		//#### 4.5. JavaScript para redes sociales
+		
+		let redesSociales = [];
+
+		async function cargarRedesSociales() {
+		    try {
+		        redesSociales = await redSocialAPI.listar(profesionalId);
+
+		        const container = document.getElementById('redesSocialesContainer');
+		        redSocialAPI.renderizar(container, redesSociales, {
+		            onEliminar: eliminarRedSocial,
+		            onEditar: editarRedSocial
+		        });
+
+		        // Actualizar select de tipos disponibles
+		        const selectTipoRed = document.getElementById('tipoRed');
+		        redSocialAPI.popularTiposRed(selectTipoRed, redesSociales);
+		    } catch (error) {
+		        console.error('Error al cargar redes sociales:', error);
+		    }
+		}
+
+		// Event listener para mostrar placeholder dinámico
+		document.getElementById('tipoRed').addEventListener('change', function() {
+		    const tipoRed = this.value;
+		    const info = redSocialAPI.getInfoTipoRed(tipoRed);
+		    document.getElementById('placeholderRedSocial').textContent =
+		        `Ejemplo: ${info.placeholder}`;
+		    document.getElementById('urlRedSocial').placeholder = info.placeholder;
+		});
+
+		async function agregarRedSocial(event) {
+		    event.preventDefault();
+
+		    const redSocialData = {
+		        tipoRed: document.getElementById('tipoRed').value,
+		        url: document.getElementById('urlRedSocial').value.trim()
+		    };
+
+		    try {
+		        await redSocialAPI.agregar(profesionalId, redSocialData);
+		        await cargarRedesSociales();
+		        cerrarModalRedSocial();
+		        mostrarAlerta('Red social agregada exitosamente', 'success');
+		    } catch (error) {
+		        mostrarAlerta('Error al agregar red social: ' + error.message, 'error');
+		    }
+		}
+
+		async function eliminarRedSocial(redSocialId) {
+		    if (!confirm('¿Eliminar esta red social?')) return;
+
+		    try {
+		        await redSocialAPI.eliminar(profesionalId, redSocialId);
+		        await cargarRedesSociales();
+		        mostrarAlerta('Red social eliminada', 'success');
+		    } catch (error) {
+		        mostrarAlerta('Error: ' + error.message, 'error');
+		    }
+		}
+
+		async function editarRedSocial(redSocialId, urlActual) {
+		    const nuevaUrl = prompt('Ingresa la nueva URL:', urlActual);
+		    if (!nuevaUrl || nuevaUrl === urlActual) return;
+
+		    try {
+		        await redSocialAPI.actualizar(profesionalId, redSocialId, nuevaUrl);
+		        await cargarRedesSociales();
+		        mostrarAlerta('URL actualizada', 'success');
+		    } catch (error) {
+		        mostrarAlerta('Error: ' + error.message, 'error');
+		    }
+		}
+		
     </script>
 </body>
 </html>

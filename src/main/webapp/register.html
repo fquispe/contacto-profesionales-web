@@ -859,13 +859,17 @@
 
             if (!isValid) return;
 
-            // Preparar datos para enviar
+            // Mapear tipo de usuario al formato del backend
+            // 'cliente' -> 'CLIENTE', 'proveedor' -> 'PROFESIONAL'
+            const tipoCuentaBackend = currentUserType === 'cliente' ? 'CLIENTE' : 'PROFESIONAL';
+
+            // Preparar datos para enviar (nuevo flujo con tipoCuenta)
             const userData = {
-                nombre: fullName,
+                nombreCompleto: fullName,
                 email: email,
                 telefono: phone,
                 password: password,
-                tipo: currentUserType
+                tipoCuenta: tipoCuentaBackend
             };
 
             setLoadingState(true);
@@ -1013,6 +1017,25 @@
             strengthText.textContent = text;
         }
 
+        function validatePasswordMatch() {
+            const password = passwordInput.value;
+            const confirmPassword = confirmPasswordInput.value;
+            
+            if (confirmPassword.length === 0) {
+                clearFieldError('confirmPassword');
+                return true;
+            }
+            
+            if (password !== confirmPassword) {
+                showFieldError('confirmPassword', 'Las contraseñas no coinciden');
+                return false;
+            }
+            
+            clearFieldError('confirmPassword');
+            confirmPasswordInput.classList.add('success');
+            return true;
+        }
+        
         // ============================================
         // FUNCIONES DE ERROR Y ALERTAS
         // ============================================

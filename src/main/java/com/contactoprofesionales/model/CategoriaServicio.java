@@ -3,11 +3,10 @@ package com.contactoprofesionales.model;
 import java.time.LocalDateTime;
 
 /**
- * Modelo para representar una categoría de servicio.
- * Corresponde a la tabla 'categorias_servicio' en la BD (tabla existente).
+ * Modelo que representa una categoría de servicio profesional.
+ * Aplicación de SRP: Solo encapsula datos de categoría de servicio.
  */
 public class CategoriaServicio {
-
     private Integer id;
     private String nombre;
     private String descripcion;
@@ -16,18 +15,29 @@ public class CategoriaServicio {
     private Boolean activo;
     private LocalDateTime fechaCreacion;
 
-    // Constructores
+    // Constructor vacío
     public CategoriaServicio() {
         this.activo = true;
         this.fechaCreacion = LocalDateTime.now();
     }
 
-    public CategoriaServicio(String nombre, String descripcion, String icono, String color) {
+    // Constructor con parámetros principales
+    public CategoriaServicio(String nombre, String descripcion) {
         this();
+        this.nombre = nombre;
+        this.descripcion = descripcion;
+    }
+
+    // Constructor completo
+    public CategoriaServicio(Integer id, String nombre, String descripcion,
+                            String icono, String color, Boolean activo) {
+        this.id = id;
         this.nombre = nombre;
         this.descripcion = descripcion;
         this.icono = icono;
         this.color = color;
+        this.activo = activo;
+        this.fechaCreacion = LocalDateTime.now();
     }
 
     // Getters y Setters
@@ -87,18 +97,12 @@ public class CategoriaServicio {
         this.fechaCreacion = fechaCreacion;
     }
 
-    // Métodos auxiliares
-    public boolean isValid() {
-        return nombre != null && !nombre.trim().isEmpty();
-    }
-
     @Override
     public String toString() {
         return "CategoriaServicio{" +
                 "id=" + id +
                 ", nombre='" + nombre + '\'' +
-                ", icono='" + icono + '\'' +
-                ", color='" + color + '\'' +
+                ", descripcion='" + descripcion + '\'' +
                 ", activo=" + activo +
                 '}';
     }

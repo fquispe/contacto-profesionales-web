@@ -11,6 +11,12 @@ import com.contactoprofesionales.service.auth.TokenServiceImpl;
 import com.contactoprofesionales.util.JsonResponse;
 import com.contactoprofesionales.exception.AuthenticationException;
 import com.contactoprofesionales.exception.DatabaseException;
+import com.contactoprofesionales.dao.usuariopersona.UsuarioPersonaDAO;
+import com.contactoprofesionales.dao.usuariopersona.UsuarioPersonaDAOImpl;
+import com.contactoprofesionales.model.UsuarioPersona;
+
+
+import java.util.Optional;
 import com.google.gson.Gson;
 import com.google.gson.JsonSyntaxException;
 import org.slf4j.Logger;
@@ -112,13 +118,16 @@ public class LoginServlet extends HttpServlet {
                 loginRequest.getPassword()
             );
             
-            // 3. Generar token JWT
+            // 3. Obtener datos completos del usuario
+            UsuarioDTO usuarioCompleto = convertirAUsuarioDTO(usuario);
+            
+            // 4. Generar token JWT
             String token = tokenService.generateToken(usuario);
             
-            // 4. Preparar respuesta
+            // 5. Preparar respuesta
             LoginResponse loginResponse = new LoginResponse(
                 token,
-                convertirAUsuarioDTO(usuario),
+                usuarioCompleto,
                 tokenService.getExpirationTime()
             );
             
@@ -129,12 +138,12 @@ public class LoginServlet extends HttpServlet {
             
             JsonResponse jsonResponse = JsonResponse.success("Login exitoso", responseData);
             
-            // 5. Log de éxito
+            // 6. Log de éxito
             long duration = System.currentTimeMillis() - startTime;
-            logger.info("✓ Login exitoso para: {} (ID: {}) - Tiempo: {}ms", 
-                usuario.getEmail(), usuario.getId(), duration);
+            logger.info("✓ Login exitoso para: {} (ID: {}) - Rol: {} - Tiempo: {}ms", 
+                usuario.getEmail(), usuario.getId(), usuarioCompleto.getTipoRol(), duration);
             
-            // 6. Retornar respuesta
+            // 7. Retornar respuesta
             response.setStatus(HttpServletResponse.SC_OK);
             response.getWriter().write(gson.toJson(jsonResponse));
             
@@ -151,7 +160,7 @@ public class LoginServlet extends HttpServlet {
             handleInternalError(response, e, startTime);
         }
     }
-
+    
     /**
      * Parsea el JSON del request a LoginRequest.
      */
@@ -178,15 +187,60 @@ public class LoginServlet extends HttpServlet {
 
     /**
      * Convierte Usuario a UsuarioDTO (sin información sensible).
+     * Obtiene datos adicionales de UsuarioPersona si está disponible.
      */
-    private UsuarioDTO convertirAUsuarioDTO(Usuario usuario) {
-        return new UsuarioDTO(
-            usuario.getId(),
-            usuario.getNombre(),
-            usuario.getEmail(),
-            usuario.getTelefono(),
-            usuario.isActivo()
-        );
+    private UsuarioDTO convertirAUsuarioDTO(Usuario usuario) throws DatabaseException {
+        UsuarioDTO dto = new UsuarioDTO();
+        
+        // Datos básicos de User
+        dto.setId(usuario.getId());
+        dto.setEmail(usuario.getEmail());
+        dto.setActivo(usuario.getActivo());
+        
+        // Valores por defecto
+        dto.setNombre("Usuario");
+        dto.setNombreCompleto("Usuario");
+        dto.setTelefono("");
+        dto.setTipoRol("CLIENTE");
+        dto.setEsCliente(true);
+        dto.setEsProfesional(false);
+        dto.setUsuarioPersonaId(usuario.getUsuarioId());
+        
+        // Si el usuario tiene usuarioPersonaId, obtener datos completos
+        if (usuario.getUsuarioId() != null) {
+            try {
+                UsuarioPersonaDAO usuarioPersonaDAO = new UsuarioPersonaDAOImpl();
+                Optional<UsuarioPersona> personaOpt = usuarioPersonaDAO.buscarPorId(usuario.getUsuarioId());
+                
+                if (personaOpt.isPresent()) {
+                    UsuarioPersona persona = personaOpt.get();
+                    
+                    // Datos personales
+                    dto.setNombre(persona.getNombreCompleto());
+                    dto.setNombreCompleto(persona.getNombreCompleto());
+                    dto.setTelefono(persona.getTelefono() != null ? persona.getTelefono() : "");
+                    
+                    // Datos de roles - ESTO ES LO CRÍTICO
+                    dto.setTipoRol(persona.getTipoRol());
+                    dto.setEsCliente(persona.getEsCliente());
+                    dto.setEsProfesional(persona.getEsProfesional());
+                    
+                    logger.debug("Datos de rol obtenidos: tipoRol={}, esCliente={}, esProfesional={}", 
+                        persona.getTipoRol(), persona.getEsCliente(), persona.getEsProfesional());
+                } else {
+                    logger.warn("No se encontró UsuarioPersona para usuarioId: {}", usuario.getUsuarioId());
+                }
+            } catch (Exception e) {
+                logger.error("Error al obtener datos de UsuarioPersona para userId: {}", usuario.getId(), e);
+            }
+        } else {
+            logger.warn("Usuario {} no tiene usuarioPersonaId asociado", usuario.getId());
+        }
+        
+        // TODO: Obtener IDs de cliente y profesional si existen
+        // Esto requeriría consultas adicionales a las tablas clientes y profesionales
+        
+        return dto;
     }
 
     /**

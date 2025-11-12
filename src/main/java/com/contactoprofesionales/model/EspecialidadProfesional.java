@@ -3,53 +3,49 @@ package com.contactoprofesionales.model;
 import java.time.LocalDateTime;
 
 /**
- * Modelo para representar una especialidad de un profesional.
- * Corresponde a la tabla 'especialidades_profesional' en la BD.
- * Un profesional puede tener hasta 3 especialidades, siendo una principal.
- * MODIFICADO: Usa categoria_id de la tabla categorias_servicio.
+ * Modelo que representa una especialidad de un profesional.
+ * Un profesional puede tener hasta 3 especialidades, siendo una la principal.
+ * Aplicación de SRP: Solo encapsula datos de especialidad profesional.
  */
 public class EspecialidadProfesional {
-
     private Integer id;
     private Integer profesionalId;
-    private Integer categoriaId; // FK a categorias_servicio
-    private String descripcion;
-    private Boolean incluyeMateriales;
-    private Double costo;
-    private String tipoCosto; // 'hora', 'dia', 'mes'
+    private Integer categoriaId;
     private Boolean esPrincipal;
-    private Integer orden; // 1, 2, o 3
+    private Integer aniosExperiencia;
+    private String descripcion;
     private LocalDateTime fechaCreacion;
-    private LocalDateTime fechaActualizacion;
-    private Boolean activo;
 
-    // Campos adicionales para JOINs (no están en la tabla)
-    private String nombreCategoria; // Nombre de la categoría (de categorias_servicio)
-    private String iconoCategoria; // Icono de la categoría
-    private String colorCategoria; // Color de la categoría
+    // Campos adicionales para joins (no se persisten, solo para consultas)
+    private String categoriaNombre;
+    private String categoriaDescripcion;
 
-    // Constructores
+    // Constructor vacío
     public EspecialidadProfesional() {
-        this.fechaCreacion = LocalDateTime.now();
-        this.fechaActualizacion = LocalDateTime.now();
-        this.activo = true;
         this.esPrincipal = false;
-        this.incluyeMateriales = false;
+        this.aniosExperiencia = 0;
+        this.fechaCreacion = LocalDateTime.now();
     }
 
-    public EspecialidadProfesional(Integer profesionalId, Integer categoriaId,
-                                   String descripcion, Boolean incluyeMateriales,
-                                   Double costo, String tipoCosto, Boolean esPrincipal,
-                                   Integer orden) {
+    // Constructor con parámetros principales
+    public EspecialidadProfesional(Integer profesionalId, Integer categoriaId, Boolean esPrincipal) {
         this();
         this.profesionalId = profesionalId;
         this.categoriaId = categoriaId;
-        this.descripcion = descripcion;
-        this.incluyeMateriales = incluyeMateriales;
-        this.costo = costo;
-        this.tipoCosto = tipoCosto;
         this.esPrincipal = esPrincipal;
-        this.orden = orden;
+    }
+
+    // Constructor completo
+    public EspecialidadProfesional(Integer id, Integer profesionalId, Integer categoriaId,
+                                  Boolean esPrincipal, Integer aniosExperiencia,
+                                  String descripcion, LocalDateTime fechaCreacion) {
+        this.id = id;
+        this.profesionalId = profesionalId;
+        this.categoriaId = categoriaId;
+        this.esPrincipal = esPrincipal;
+        this.aniosExperiencia = aniosExperiencia;
+        this.descripcion = descripcion;
+        this.fechaCreacion = fechaCreacion;
     }
 
     // Getters y Setters
@@ -77,28 +73,20 @@ public class EspecialidadProfesional {
         this.categoriaId = categoriaId;
     }
 
-    public String getNombreCategoria() {
-        return nombreCategoria;
+    public Boolean getEsPrincipal() {
+        return esPrincipal;
     }
 
-    public void setNombreCategoria(String nombreCategoria) {
-        this.nombreCategoria = nombreCategoria;
+    public void setEsPrincipal(Boolean esPrincipal) {
+        this.esPrincipal = esPrincipal;
     }
 
-    public String getIconoCategoria() {
-        return iconoCategoria;
+    public Integer getAniosExperiencia() {
+        return aniosExperiencia;
     }
 
-    public void setIconoCategoria(String iconoCategoria) {
-        this.iconoCategoria = iconoCategoria;
-    }
-
-    public String getColorCategoria() {
-        return colorCategoria;
-    }
-
-    public void setColorCategoria(String colorCategoria) {
-        this.colorCategoria = colorCategoria;
+    public void setAniosExperiencia(Integer aniosExperiencia) {
+        this.aniosExperiencia = aniosExperiencia;
     }
 
     public String getDescripcion() {
@@ -109,46 +97,6 @@ public class EspecialidadProfesional {
         this.descripcion = descripcion;
     }
 
-    public Boolean getIncluyeMateriales() {
-        return incluyeMateriales;
-    }
-
-    public void setIncluyeMateriales(Boolean incluyeMateriales) {
-        this.incluyeMateriales = incluyeMateriales;
-    }
-
-    public Double getCosto() {
-        return costo;
-    }
-
-    public void setCosto(Double costo) {
-        this.costo = costo;
-    }
-
-    public String getTipoCosto() {
-        return tipoCosto;
-    }
-
-    public void setTipoCosto(String tipoCosto) {
-        this.tipoCosto = tipoCosto;
-    }
-
-    public Boolean getEsPrincipal() {
-        return esPrincipal;
-    }
-
-    public void setEsPrincipal(Boolean esPrincipal) {
-        this.esPrincipal = esPrincipal;
-    }
-
-    public Integer getOrden() {
-        return orden;
-    }
-
-    public void setOrden(Integer orden) {
-        this.orden = orden;
-    }
-
     public LocalDateTime getFechaCreacion() {
         return fechaCreacion;
     }
@@ -157,28 +105,20 @@ public class EspecialidadProfesional {
         this.fechaCreacion = fechaCreacion;
     }
 
-    public LocalDateTime getFechaActualizacion() {
-        return fechaActualizacion;
+    public String getCategoriaNombre() {
+        return categoriaNombre;
     }
 
-    public void setFechaActualizacion(LocalDateTime fechaActualizacion) {
-        this.fechaActualizacion = fechaActualizacion;
+    public void setCategoriaNombre(String categoriaNombre) {
+        this.categoriaNombre = categoriaNombre;
     }
 
-    public Boolean getActivo() {
-        return activo;
+    public String getCategoriaDescripcion() {
+        return categoriaDescripcion;
     }
 
-    public void setActivo(Boolean activo) {
-        this.activo = activo;
-    }
-
-    // Métodos de validación
-    public boolean isValid() {
-        return categoriaId != null && categoriaId > 0
-            && costo != null && costo > 0
-            && tipoCosto != null && (tipoCosto.equals("hora") || tipoCosto.equals("dia") || tipoCosto.equals("mes"))
-            && orden != null && orden >= 1 && orden <= 3;
+    public void setCategoriaDescripcion(String categoriaDescripcion) {
+        this.categoriaDescripcion = categoriaDescripcion;
     }
 
     @Override
@@ -187,11 +127,9 @@ public class EspecialidadProfesional {
                 "id=" + id +
                 ", profesionalId=" + profesionalId +
                 ", categoriaId=" + categoriaId +
-                ", nombreCategoria='" + nombreCategoria + '\'' +
-                ", costo=" + costo +
-                ", tipoCosto='" + tipoCosto + '\'' +
                 ", esPrincipal=" + esPrincipal +
-                ", orden=" + orden +
+                ", aniosExperiencia=" + aniosExperiencia +
+                ", categoriaNombre='" + categoriaNombre + '\'' +
                 '}';
     }
 }
