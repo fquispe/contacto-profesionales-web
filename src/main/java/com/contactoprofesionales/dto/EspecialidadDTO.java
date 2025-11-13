@@ -1,28 +1,32 @@
 package com.contactoprofesionales.dto;
 
 /**
- * DTO para transferir información de especialidades de profesional
+ * DTO para transferir información de especialidades de profesionales.
+ * Incluye datos de la especialidad y de la categoría relacionada.
  */
 public class EspecialidadDTO {
 
     private Integer id;
     private Integer profesionalId;
     private Integer categoriaId;
+    
+    // Información de la categoría (obtenida via JOIN)
     private String categoriaNombre;
     private String categoriaDescripcion;
-    private Boolean esPrincipal;
-    private Integer aniosExperiencia;
+    private String categoriaIcono;
+    private String categoriaColor;
+    
+    // Información de la especialidad
     private String descripcion;
+    private Boolean incluyeMateriales;
+    private Double costo;
+    private String tipoCosto;
+    private Boolean esPrincipal;
+    private Integer orden;
+    private Boolean activo;
 
     // Constructor vacío
     public EspecialidadDTO() {
-    }
-
-    // Constructor con campos principales
-    public EspecialidadDTO(Integer categoriaId, String categoriaNombre, Boolean esPrincipal) {
-        this.categoriaId = categoriaId;
-        this.categoriaNombre = categoriaNombre;
-        this.esPrincipal = esPrincipal;
     }
 
     // Getters y Setters
@@ -66,20 +70,20 @@ public class EspecialidadDTO {
         this.categoriaDescripcion = categoriaDescripcion;
     }
 
-    public Boolean getEsPrincipal() {
-        return esPrincipal;
+    public String getCategoriaIcono() {
+        return categoriaIcono;
     }
 
-    public void setEsPrincipal(Boolean esPrincipal) {
-        this.esPrincipal = esPrincipal;
+    public void setCategoriaIcono(String categoriaIcono) {
+        this.categoriaIcono = categoriaIcono;
     }
 
-    public Integer getAniosExperiencia() {
-        return aniosExperiencia;
+    public String getCategoriaColor() {
+        return categoriaColor;
     }
 
-    public void setAniosExperiencia(Integer aniosExperiencia) {
-        this.aniosExperiencia = aniosExperiencia;
+    public void setCategoriaColor(String categoriaColor) {
+        this.categoriaColor = categoriaColor;
     }
 
     public String getDescripcion() {
@@ -88,5 +92,68 @@ public class EspecialidadDTO {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+
+    public Boolean getIncluyeMateriales() {
+        return incluyeMateriales;
+    }
+
+    public void setIncluyeMateriales(Boolean incluyeMateriales) {
+        this.incluyeMateriales = incluyeMateriales;
+    }
+
+    public Double getCosto() {
+        return costo;
+    }
+
+    public void setCosto(Double costo) {
+        this.costo = costo;
+    }
+
+    public String getTipoCosto() {
+        return tipoCosto;
+    }
+
+    public void setTipoCosto(String tipoCosto) {
+        this.tipoCosto = tipoCosto;
+    }
+
+    public Boolean getEsPrincipal() {
+        return esPrincipal;
+    }
+
+    public void setEsPrincipal(Boolean esPrincipal) {
+        this.esPrincipal = esPrincipal;
+    }
+
+    public Integer getOrden() {
+        return orden;
+    }
+
+    public void setOrden(Integer orden) {
+        this.orden = orden;
+    }
+
+    public Boolean getActivo() {
+        return activo;
+    }
+
+    public void setActivo(Boolean activo) {
+        this.activo = activo;
+    }
+
+    @Override
+    public String toString() {
+        return "EspecialidadDTO{" +
+                "id=" + id +
+                ", profesionalId=" + profesionalId +
+                ", categoriaId=" + categoriaId +
+                ", categoriaNombre='" + categoriaNombre + '\'' +
+                ", descripcion='" + descripcion + '\'' +
+                ", costo=" + costo +
+                ", tipoCosto='" + tipoCosto + '\'' +
+                ", esPrincipal=" + esPrincipal +
+                ", orden=" + orden +
+                '}';
     }
 }

@@ -35,14 +35,15 @@ public class EspecialidadServiceImpl implements EspecialidadService {
     }
 
     @Override
-    public EspecialidadDTO agregar(Integer profesionalId, Integer categoriaId, Integer aniosExp,
-                                   String desc, Boolean esPrincipal)
+    public EspecialidadDTO agregar(Integer profesionalId, Integer categoriaId, 
+                                   String descripcion, Boolean incluyeMateriales,
+                                   Double costo, String tipoCosto, Boolean esPrincipal)
             throws ValidationException, DatabaseException {
         logger.debug("Agregando especialidad para profesional ID: {}, categoría ID: {}",
                     profesionalId, categoriaId);
 
         // Validar parámetros
-        validarParametrosAgregar(profesionalId, categoriaId, aniosExp, esPrincipal);
+        validarParametrosAgregar(profesionalId, categoriaId, costo, tipoCosto);
 
         try {
             // Validar que no se exceda el límite de especialidades
@@ -80,13 +81,19 @@ public class EspecialidadServiceImpl implements EspecialidadService {
                 }
             }
 
+            // Calcular el siguiente orden
+            int siguienteOrden = especialidadesExistentes.size() + 1;
+
             // Crear especialidad
             EspecialidadProfesional especialidad = new EspecialidadProfesional();
             especialidad.setProfesionalId(profesionalId);
             especialidad.setCategoriaId(categoriaId);
-            especialidad.setAniosExperiencia(aniosExp != null ? aniosExp : 0);
-            especialidad.setDescripcion(desc != null ? desc.trim() : null);
+            especialidad.setDescripcion(descripcion != null ? descripcion.trim() : null);
+            especialidad.setIncluyeMateriales(incluyeMateriales != null ? incluyeMateriales : false);
+            especialidad.setCosto(costo);
+            especialidad.setTipoCosto(tipoCosto);
             especialidad.setEsPrincipal(esPrincipal != null ? esPrincipal : false);
+            especialidad.setOrden(siguienteOrden);
 
             // Registrar especialidad
             especialidad = especialidadDAO.registrar(especialidad);
@@ -94,6 +101,8 @@ public class EspecialidadServiceImpl implements EspecialidadService {
             // Cargar información de categoría
             especialidad.setCategoriaNombre(categoria.getNombre());
             especialidad.setCategoriaDescripcion(categoria.getDescripcion());
+            especialidad.setCategoriaIcono(categoria.getIcono());
+            especialidad.setCategoriaColor(categoria.getColor());
 
             logger.info("Especialidad agregada exitosamente con ID: {} para profesional ID: {}",
                        especialidad.getId(), profesionalId);
@@ -102,6 +111,74 @@ public class EspecialidadServiceImpl implements EspecialidadService {
 
         } catch (DatabaseException e) {
             logger.error("Error al agregar especialidad: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    @Override
+    public EspecialidadDTO actualizar(Integer id, String descripcion, Boolean incluyeMateriales,
+                                     Double costo, String tipoCosto)
+            throws ValidationException, DatabaseException {
+        logger.debug("Actualizando especialidad ID: {}", id);
+
+        // Validar parámetros
+        if (id == null || id <= 0) {
+            throw new ValidationException("El ID de la especialidad es inválido");
+        }
+
+        if (costo != null && costo <= 0) {
+            throw new ValidationException("El costo debe ser mayor a cero");
+        }
+
+        if (tipoCosto != null && !tipoCosto.equals("hora") && !tipoCosto.equals("dia") && !tipoCosto.equals("mes")) {
+            throw new ValidationException("El tipo de costo debe ser 'hora', 'dia' o 'mes'");
+        }
+
+        try {
+            // Buscar especialidad existente
+            Optional<EspecialidadProfesional> especialidadOpt = especialidadDAO.buscarPorId(id);
+            if (!especialidadOpt.isPresent()) {
+                throw new ValidationException("La especialidad con ID " + id + " no existe");
+            }
+
+            EspecialidadProfesional especialidad = especialidadOpt.get();
+
+            // Actualizar campos
+            if (descripcion != null) {
+                especialidad.setDescripcion(descripcion.trim());
+            }
+            if (incluyeMateriales != null) {
+                especialidad.setIncluyeMateriales(incluyeMateriales);
+            }
+            if (costo != null) {
+                especialidad.setCosto(costo);
+            }
+            if (tipoCosto != null) {
+                especialidad.setTipoCosto(tipoCosto);
+            }
+
+            // Actualizar en BD
+            especialidad = especialidadDAO.actualizar(especialidad);
+
+            // Cargar información de categoría si está disponible
+            if (especialidad.getCategoriaId() != null) {
+                Optional<CategoriaServicio> categoriaOpt = 
+                    categoriaDAO.buscarPorId(especialidad.getCategoriaId());
+                if (categoriaOpt.isPresent()) {
+                    CategoriaServicio categoria = categoriaOpt.get();
+                    especialidad.setCategoriaNombre(categoria.getNombre());
+                    especialidad.setCategoriaDescripcion(categoria.getDescripcion());
+                    especialidad.setCategoriaIcono(categoria.getIcono());
+                    especialidad.setCategoriaColor(categoria.getColor());
+                }
+            }
+
+            logger.info("Especialidad actualizada exitosamente con ID: {}", id);
+
+            return convertirModeloADTO(especialidad);
+
+        } catch (DatabaseException e) {
+            logger.error("Error al actualizar especialidad: {}", e.getMessage());
             throw e;
         }
     }
@@ -247,7 +324,7 @@ public class EspecialidadServiceImpl implements EspecialidadService {
      * Valida los parámetros para agregar una especialidad
      */
     private void validarParametrosAgregar(Integer profesionalId, Integer categoriaId,
-                                          Integer aniosExp, Boolean esPrincipal)
+                                          Double costo, String tipoCosto)
             throws ValidationException {
         List<String> errores = new ArrayList<>();
 
@@ -263,12 +340,16 @@ public class EspecialidadServiceImpl implements EspecialidadService {
             errores.add("El ID de la categoría debe ser un número positivo");
         }
 
-        if (aniosExp != null) {
-            if (aniosExp < 0) {
-                errores.add("Los años de experiencia no pueden ser negativos");
-            } else if (aniosExp > 100) {
-                errores.add("Los años de experiencia no pueden ser mayores a 100");
-            }
+        if (costo == null) {
+            errores.add("El costo es obligatorio");
+        } else if (costo <= 0) {
+            errores.add("El costo debe ser mayor a cero");
+        }
+
+        if (tipoCosto == null) {
+            errores.add("El tipo de costo es obligatorio");
+        } else if (!tipoCosto.equals("hora") && !tipoCosto.equals("dia") && !tipoCosto.equals("mes")) {
+            errores.add("El tipo de costo debe ser 'hora', 'dia' o 'mes'");
         }
 
         if (!errores.isEmpty()) {
@@ -287,9 +368,15 @@ public class EspecialidadServiceImpl implements EspecialidadService {
         dto.setCategoriaId(especialidad.getCategoriaId());
         dto.setCategoriaNombre(especialidad.getCategoriaNombre());
         dto.setCategoriaDescripcion(especialidad.getCategoriaDescripcion());
-        dto.setEsPrincipal(especialidad.getEsPrincipal());
-        dto.setAniosExperiencia(especialidad.getAniosExperiencia());
+        dto.setCategoriaIcono(especialidad.getCategoriaIcono());
+        dto.setCategoriaColor(especialidad.getCategoriaColor());
         dto.setDescripcion(especialidad.getDescripcion());
+        dto.setIncluyeMateriales(especialidad.getIncluyeMateriales());
+        dto.setCosto(especialidad.getCosto());
+        dto.setTipoCosto(especialidad.getTipoCosto());
+        dto.setEsPrincipal(especialidad.getEsPrincipal());
+        dto.setOrden(especialidad.getOrden());
+        dto.setActivo(especialidad.getActivo());
 
         return dto;
     }

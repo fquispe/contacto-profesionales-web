@@ -34,6 +34,8 @@ import java.util.Map;
  * POST   /api/profesionales/{profId}/especialidades - Agregar especialidad
  * PUT    /api/profesionales/{profId}/especialidades/{id}/principal - Marcar como principal
  * DELETE /api/profesionales/{profId}/especialidades/{id} - Eliminar especialidad
+ * 
+ * VERSIÓN CORREGIDA - Usa los parámetros correctos según tabla especialidades_profesional
  */
 @WebServlet(name = "EspecialidadServlet", urlPatterns = {"/api/profesionales/*/especialidades", "/api/profesionales/*/especialidades/*"})
 public class EspecialidadServlet extends HttpServlet {
@@ -120,6 +122,7 @@ public class EspecialidadServlet extends HttpServlet {
 
     /**
      * POST - Agregar nueva especialidad a un profesional
+     * CORREGIDO: Usa los parámetros correctos según la tabla BD
      */
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
@@ -149,20 +152,35 @@ public class EspecialidadServlet extends HttpServlet {
             // Parsear JSON
             JsonObject jsonObject = gson.fromJson(jsonBody, JsonObject.class);
 
+            // CORREGIDO: Extraer campos según la estructura real de la tabla
             Integer categoriaId = jsonObject.get("categoriaId").getAsInt();
-            Integer aniosExperiencia = jsonObject.has("aniosExperiencia") && !jsonObject.get("aniosExperiencia").isJsonNull()
-                ? jsonObject.get("aniosExperiencia").getAsInt() : null;
+            
             String descripcion = jsonObject.has("descripcion") && !jsonObject.get("descripcion").isJsonNull()
                 ? jsonObject.get("descripcion").getAsString() : null;
+            
+            Boolean incluyeMateriales = jsonObject.has("incluyeMateriales") && !jsonObject.get("incluyeMateriales").isJsonNull()
+                ? jsonObject.get("incluyeMateriales").getAsBoolean() : false;
+            
+            Double costo = jsonObject.get("costo").getAsDouble();
+            
+            String tipoCosto = jsonObject.get("tipoCosto").getAsString();
+            
             Boolean esPrincipal = jsonObject.has("esPrincipal") && !jsonObject.get("esPrincipal").isJsonNull()
                 ? jsonObject.get("esPrincipal").getAsBoolean() : false;
 
-            logger.debug("Datos parseados - categoriaId: {}, aniosExp: {}, esPrincipal: {}",
-                categoriaId, aniosExperiencia, esPrincipal);
+            logger.debug("Datos parseados - categoriaId: {}, costo: {}, tipoCosto: {}, esPrincipal: {}",
+                categoriaId, costo, tipoCosto, esPrincipal);
 
-            // Agregar especialidad
+            // CORREGIDO: Llamar al método con los parámetros correctos
             EspecialidadDTO especialidadCreada = especialidadService.agregar(
-                profesionalId, categoriaId, aniosExperiencia, descripcion, esPrincipal);
+                profesionalId,      // Integer profesionalId
+                categoriaId,        // Integer categoriaId
+                descripcion,        // String descripcion
+                incluyeMateriales,  // Boolean incluyeMateriales
+                costo,              // Double costo
+                tipoCosto,          // String tipoCosto
+                esPrincipal         // Boolean esPrincipal
+            );
 
             logger.info("✓ Especialidad agregada exitosamente con ID: {}", especialidadCreada.getId());
 

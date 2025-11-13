@@ -9,9 +9,10 @@ import java.time.LocalDateTime;
  */
 public class EspecialidadProfesional {
 
+    // Campos de la tabla especialidades_profesional
     private Integer id;
     private Integer profesionalId;
-    private String nombreEspecialidad;
+    private Integer categoriaId;
     private String descripcion;
     private Boolean incluyeMateriales;
     private Double costo;
@@ -22,6 +23,12 @@ public class EspecialidadProfesional {
     private LocalDateTime fechaActualizacion;
     private Boolean activo;
 
+    // Campos transientes (no persisten en BD, se obtienen via JOIN con categorias_servicio)
+    private String categoriaNombre;
+    private String categoriaDescripcion;
+    private String categoriaIcono;
+    private String categoriaColor;
+
     // Constructores
     public EspecialidadProfesional() {
         this.fechaCreacion = LocalDateTime.now();
@@ -31,23 +38,22 @@ public class EspecialidadProfesional {
         this.incluyeMateriales = false;
     }
 
-    public EspecialidadProfesional(Integer profesionalId, String nombreEspecialidad,
+    public EspecialidadProfesional(Integer profesionalId, Integer categoriaId,
                                    String descripcion, Boolean incluyeMateriales,
                                    Double costo, String tipoCosto, Boolean esPrincipal,
                                    Integer orden) {
         this();
         this.profesionalId = profesionalId;
-        this.nombreEspecialidad = nombreEspecialidad;
+        this.categoriaId = categoriaId;
         this.descripcion = descripcion;
         this.incluyeMateriales = incluyeMateriales;
         this.costo = costo;
         this.tipoCosto = tipoCosto;
         this.esPrincipal = esPrincipal;
         this.orden = orden;
-
     }
 
-    // Getters y Setters
+    // Getters y Setters - Campos de BD
     public Integer getId() {
         return id;
     }
@@ -64,14 +70,12 @@ public class EspecialidadProfesional {
         this.profesionalId = profesionalId;
     }
 
-
-    public String getNombreEspecialidad() {
-        return nombreEspecialidad;
+    public Integer getCategoriaId() {
+        return categoriaId;
     }
 
-    public void setNombreEspecialidad(String nombreEspecialidad) {
-        this.nombreEspecialidad = nombreEspecialidad;
-
+    public void setCategoriaId(Integer categoriaId) {
+        this.categoriaId = categoriaId;
     }
 
     public String getDescripcion() {
@@ -146,9 +150,42 @@ public class EspecialidadProfesional {
         this.activo = activo;
     }
 
+    // Getters y Setters - Campos transientes (de categoría)
+    public String getCategoriaNombre() {
+        return categoriaNombre;
+    }
+
+    public void setCategoriaNombre(String categoriaNombre) {
+        this.categoriaNombre = categoriaNombre;
+    }
+
+    public String getCategoriaDescripcion() {
+        return categoriaDescripcion;
+    }
+
+    public void setCategoriaDescripcion(String categoriaDescripcion) {
+        this.categoriaDescripcion = categoriaDescripcion;
+    }
+
+    public String getCategoriaIcono() {
+        return categoriaIcono;
+    }
+
+    public void setCategoriaIcono(String categoriaIcono) {
+        this.categoriaIcono = categoriaIcono;
+    }
+
+    public String getCategoriaColor() {
+        return categoriaColor;
+    }
+
+    public void setCategoriaColor(String categoriaColor) {
+        this.categoriaColor = categoriaColor;
+    }
+
     // Métodos de validación
     public boolean isValid() {
-        return nombreEspecialidad != null && !nombreEspecialidad.trim().isEmpty()
+        return categoriaId != null && categoriaId > 0
             && costo != null && costo > 0
             && tipoCosto != null && (tipoCosto.equals("hora") || tipoCosto.equals("dia") || tipoCosto.equals("mes"))
             && orden != null && orden >= 1 && orden <= 3;
@@ -159,7 +196,8 @@ public class EspecialidadProfesional {
         return "EspecialidadProfesional{" +
                 "id=" + id +
                 ", profesionalId=" + profesionalId +
-                ", nombreEspecialidad='" + nombreEspecialidad + '\'' +
+                ", categoriaId=" + categoriaId +
+                ", categoriaNombre='" + categoriaNombre + '\'' +
                 ", costo=" + costo +
                 ", tipoCosto='" + tipoCosto + '\'' +
                 ", esPrincipal=" + esPrincipal +

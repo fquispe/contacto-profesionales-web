@@ -7,7 +7,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.sql.*;
-import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -230,43 +229,50 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
     }
 
     private boolean guardarEspecialidadesInterno(Connection conn, Integer profesionalId,
-                                                List<EspecialidadProfesional> especialidades) throws SQLException {
+            List<EspecialidadProfesional> especialidades) throws SQLException {
 
-        String sql = "INSERT INTO especialidades_profesional " +
-                    "(profesional_id, nombre_especialidad, descripcion, incluye_materiales, " +
-                    "costo, tipo_costo, es_principal, orden) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
-
-        try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            for (EspecialidadProfesional esp : especialidades) {
-                esp.setProfesionalId(profesionalId);
-
-                stmt.setInt(1, profesionalId);
-                stmt.setString(2, esp.getNombreEspecialidad());
-                stmt.setString(3, esp.getDescripcion());
-                stmt.setBoolean(4, esp.getIncluyeMateriales());
-                stmt.setDouble(5, esp.getCosto());
-                stmt.setString(6, esp.getTipoCosto());
-                stmt.setBoolean(7, esp.getEsPrincipal());
-                stmt.setInt(8, esp.getOrden());
-
-                stmt.executeUpdate();
-
-                // Obtener ID generado
-                ResultSet rs = stmt.getGeneratedKeys();
-                if (rs.next()) {
-                    esp.setId(rs.getInt(1));
-                }
-            }
-            return true;
-        }
-    }
+		// ✅ SQL CORREGIDO: Usa categoria_id en lugar de nombre_especialidad
+		String sql = "INSERT INTO especialidades_profesional " +
+		"(profesional_id, categoria_id, descripcion, incluye_materiales, " +
+		"costo, tipo_costo, es_principal, orden, fecha_creacion, fecha_actualizacion, activo) " +
+		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), true)";
+		
+		try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+			for (EspecialidadProfesional esp : especialidades) {
+				esp.setProfesionalId(profesionalId);
+				
+				stmt.setInt(1, profesionalId);
+				stmt.setInt(2, esp.getCategoriaId());          // ✅ Cambio aquí
+				stmt.setString(3, esp.getDescripcion());
+				stmt.setBoolean(4, esp.getIncluyeMateriales());
+				stmt.setDouble(5, esp.getCosto());
+				stmt.setString(6, esp.getTipoCosto());
+				stmt.setBoolean(7, esp.getEsPrincipal());
+				stmt.setInt(8, esp.getOrden());
+				
+				stmt.executeUpdate();
+				
+				// Obtener ID generado
+				ResultSet rs = stmt.getGeneratedKeys();
+				if (rs.next()) {
+					esp.setId(rs.getInt(1));
+				}
+			}
+			return true;
+		}
+	}
 
     @Override
     public List<EspecialidadProfesional> obtenerEspecialidadesPorProfesional(Integer profesionalId) throws Exception {
-        String sql = "SELECT * FROM especialidades_profesional " +
-                    "WHERE profesional_id = ? AND activo = TRUE " +
-                    "ORDER BY orden ASC";
+    	String sql = "SELECT e.id, e.profesional_id, e.categoria_id, e.descripcion, " +
+                "e.incluye_materiales, e.costo, e.tipo_costo, e.es_principal, e.orden, " +
+                "e.fecha_creacion, e.fecha_actualizacion, e.activo, " +
+                "c.nombre AS categoria_nombre, c.descripcion AS categoria_descripcion, " +
+                "c.icono AS categoria_icono, c.color AS categoria_color " +
+                "FROM especialidades_profesional e " +
+                "INNER JOIN categorias_servicio c ON e.categoria_id = c.id " +
+                "WHERE e.profesional_id = ? AND e.activo = TRUE " +
+                "ORDER BY e.orden ASC";
 
         List<EspecialidadProfesional> especialidades = new ArrayList<>();
 
@@ -307,9 +313,11 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
 
     private EspecialidadProfesional mapearEspecialidad(ResultSet rs) throws SQLException {
         EspecialidadProfesional esp = new EspecialidadProfesional();
+        
+        // Campos de la tabla especialidades_profesional
         esp.setId(rs.getInt("id"));
         esp.setProfesionalId(rs.getInt("profesional_id"));
-        esp.setNombreEspecialidad(rs.getString("nombre_especialidad"));
+        esp.setCategoriaId(rs.getInt("categoria_id"));  // ✅ CAMBIO AQUÍ
         esp.setDescripcion(rs.getString("descripcion"));
         esp.setIncluyeMateriales(rs.getBoolean("incluye_materiales"));
         esp.setCosto(rs.getDouble("costo"));
@@ -319,6 +327,18 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
         esp.setFechaCreacion(rs.getTimestamp("fecha_creacion").toLocalDateTime());
         esp.setFechaActualizacion(rs.getTimestamp("fecha_actualizacion").toLocalDateTime());
         esp.setActivo(rs.getBoolean("activo"));
+        
+        // ✅ NUEVO: Campos transientes de categoría (del JOIN)
+        try {
+            esp.setCategoriaNombre(rs.getString("categoria_nombre"));
+            esp.setCategoriaDescripcion(rs.getString("categoria_descripcion"));
+            esp.setCategoriaIcono(rs.getString("categoria_icono"));
+            esp.setCategoriaColor(rs.getString("categoria_color"));
+        } catch (SQLException e) {
+            // Estos campos podrían no estar si no se hizo JOIN
+            logger.debug("Campos de categoría no disponibles en ResultSet");
+        }
+        
         return esp;
     }
 

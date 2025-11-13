@@ -1,27 +1,31 @@
 /**
+ * Servicios-profesional.js 
  * Servicios Profesional - JavaScript
  * Gestiona el formulario de configuración de servicios profesionales
+ * 
+ * VERSIÓN CORREGIDA v2:
+ * - Usa categoriaId desde la BD
+ * - Dropdowns en cascada para ubicaciones (departamento → provincia → distrito)
+ * - Valores por defecto: "Todo el país" y "Todo el tiempo" activados
  */
 
 // Estado de la aplicación
 const appState = {
-    profesionalId: null,
+    usuarioId: null,
+    categorias: [],
+    departamentos: [],      // ✅ NUEVO - Lista de departamentos
+    provincias: [],         // ✅ NUEVO - Provincias del departamento seleccionado
+    distritos: [],          // ✅ NUEVO - Distritos de la provincia seleccionada
     especialidades: [],
     ubicaciones: [],
     horarios: [],
-    todoPais: false,
-    todoTiempo: false,
+    todoPais: true,         // ✅ CAMBIADO - Por defecto activado
+    todoTiempo: true,       // ✅ CAMBIADO - Por defecto activado
     modoEdicion: false
 };
 
 // Datos de referencia
 const diasSemana = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
-const departamentosPeru = [
-    'Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca', 'Callao', 'Cusco',
-    'Huancavelica', 'Huánuco', 'Ica', 'Junín', 'La Libertad', 'Lambayeque', 'Lima',
-    'Loreto', 'Madre de Dios', 'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín',
-    'Tacna', 'Tumbes', 'Ucayali'
-];
 
 // =====================================================================
 // INICIALIZACIÓN
@@ -41,10 +45,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
     }
 
-    appState.profesionalId = userData.id;
+    appState.usuarioId = userData.id;
+    console.log('✓ ID del usuario:', appState.usuarioId);
+
+    // Cargar categorías y departamentos
+    await Promise.all([
+        cargarCategorias(),
+        cargarDepartamentos()
+    ]);
 
     // Configurar event listeners
     configurarEventListeners();
+
+    // ✅ NUEVO - Establecer valores por defecto en los checkboxes
+    document.getElementById('todoPaisCheckbox').checked = true;
+    document.getElementById('todoTiempoCheckbox').checked = true;
+    
+    // Aplicar estado inicial (ocultar secciones)
+    toggleTodoPais();
+    toggleTodoTiempo();
 
     // Cargar datos existentes si los hay
     await cargarDatosExistentes();
@@ -54,6 +73,118 @@ document.addEventListener('DOMContentLoaded', async () => {
         agregarEspecialidad();
     }
 });
+
+// =====================================================================
+// CARGAR DATOS DE REFERENCIA
+// =====================================================================
+
+async function cargarCategorias() {
+    console.log('Cargando categorías de servicio desde la BD...');
+    mostrarLoading(true);
+
+    try {
+        const response = await fetch('./api/categorias');
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            appState.categorias = data.data;
+            console.log(`✓ Categorías cargadas: ${appState.categorias.length}`);
+        } else {
+            throw new Error('No se pudieron cargar las categorías');
+        }
+    } catch (error) {
+        console.error('Error cargando categorías:', error);
+        mostrarAlerta('error', 'Error al cargar las categorías de servicio. Por favor, recargue la página.');
+        
+        // Categorías de respaldo
+        appState.categorias = [
+            { id: 1, nombre: 'Electricista', icono: '⚡', color: '#FFD700' },
+            { id: 2, nombre: 'Plomero', icono: '🔧', color: '#4169E1' },
+            { id: 3, nombre: 'Carpintero', icono: '🪚', color: '#8B4513' },
+            { id: 4, nombre: 'Pintor', icono: '🎨', color: '#FF6347' },
+            { id: 5, nombre: 'Albañil', icono: '🧱', color: '#A0522D' }
+        ];
+    } finally {
+        mostrarLoading(false);
+    }
+}
+
+// ✅ NUEVO - Cargar departamentos desde la BD
+async function cargarDepartamentos() {
+    console.log('Cargando departamentos desde la BD...');
+
+    try {
+        const response = await fetch('./api/ubicacion/departamentos');
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            appState.departamentos = data.data;
+            console.log(`✓ Departamentos cargados: ${appState.departamentos.length}`);
+        } else {
+            throw new Error('No se pudieron cargar los departamentos');
+        }
+    } catch (error) {
+        console.error('Error cargando departamentos:', error);
+        mostrarAlerta('warning', 'No se pudieron cargar los departamentos desde el servidor. Usando lista local.');
+        
+        // Fallback - departamentos hardcoded
+        const departamentosLocal = [
+            'Amazonas', 'Áncash', 'Apurímac', 'Arequipa', 'Ayacucho', 'Cajamarca', 'Callao', 'Cusco',
+            'Huancavelica', 'Huánuco', 'Ica', 'Junín', 'La Libertad', 'Lambayeque', 'Lima',
+            'Loreto', 'Madre de Dios', 'Moquegua', 'Pasco', 'Piura', 'Puno', 'San Martín',
+            'Tacna', 'Tumbes', 'Ucayali'
+        ];
+        
+        appState.departamentos = departamentosLocal.map((nombre, index) => ({
+            id: index + 1,
+            nombre: nombre
+        }));
+    }
+}
+
+// ✅ NUEVO - Cargar provincias de un departamento
+async function cargarProvincias(departamentoId) {
+    console.log('Cargando provincias del departamento ID:', departamentoId);
+
+    try {
+        const response = await fetch(`./api/ubicacion/provincias?departamentoId=${departamentoId}`);
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            appState.provincias = data.data;
+            console.log(`✓ Provincias cargadas: ${appState.provincias.length}`);
+            return appState.provincias;
+        } else {
+            throw new Error('No se pudieron cargar las provincias');
+        }
+    } catch (error) {
+        console.error('Error cargando provincias:', error);
+        appState.provincias = [];
+        return [];
+    }
+}
+
+// ✅ NUEVO - Cargar distritos de una provincia
+async function cargarDistritos(provinciaId) {
+    console.log('Cargando distritos de la provincia ID:', provinciaId);
+
+    try {
+        const response = await fetch(`./api/ubicacion/distritos?provinciaId=${provinciaId}`);
+        const data = await response.json();
+
+        if (data.success && data.data) {
+            appState.distritos = data.data;
+            console.log(`✓ Distritos cargados: ${appState.distritos.length}`);
+            return appState.distritos;
+        } else {
+            throw new Error('No se pudieron cargar los distritos');
+        }
+    } catch (error) {
+        console.error('Error cargando distritos:', error);
+        appState.distritos = [];
+        return [];
+    }
+}
 
 // =====================================================================
 // CONFIGURACIÓN DE EVENT LISTENERS
@@ -81,7 +212,7 @@ async function cargarDatosExistentes() {
     mostrarLoading(true);
 
     try {
-        const response = await fetch(`./api/servicios-profesional?profesionalId=${appState.profesionalId}`);
+        const response = await fetch(`./api/servicios-profesional?usuarioId=${appState.usuarioId}`);
         const data = await response.json();
 
         if (data.success && data.data) {
@@ -150,7 +281,8 @@ function agregarEspecialidad(datosExistentes = null) {
 
     const especialidad = {
         orden: index + 1,
-        nombreEspecialidad: datosExistentes?.nombreEspecialidad || '',
+        categoriaId: datosExistentes?.categoriaId || (appState.categorias.length > 0 ? appState.categorias[0].id : null),
+        categoriaNombre: datosExistentes?.categoriaNombre || (appState.categorias.length > 0 ? appState.categorias[0].nombre : ''),
         descripcion: datosExistentes?.descripcion || '',
         incluyeMateriales: datosExistentes?.incluyeMateriales || false,
         costo: datosExistentes?.costo || '',
@@ -172,12 +304,10 @@ function eliminarEspecialidad(index) {
     const eraPrincipal = appState.especialidades[index].esPrincipal;
     appState.especialidades.splice(index, 1);
 
-    // Si eliminamos la principal, hacer principal la primera
     if (eraPrincipal && appState.especialidades.length > 0) {
         appState.especialidades[0].esPrincipal = true;
     }
 
-    // Reordenar
     appState.especialidades.forEach((esp, i) => {
         esp.orden = i + 1;
     });
@@ -197,6 +327,11 @@ function renderizarEspecialidades() {
     const container = document.getElementById('especialidadesContainer');
     container.innerHTML = '';
 
+    if (appState.categorias.length === 0) {
+        container.innerHTML = '<p style="text-align: center; color: var(--error-color); padding: 20px;">⚠️ No se pudieron cargar las categorías. Por favor, recargue la página.</p>';
+        return;
+    }
+
     appState.especialidades.forEach((esp, index) => {
         const div = document.createElement('div');
         div.className = 'especialidad-item';
@@ -213,12 +348,16 @@ function renderizarEspecialidades() {
             </div>
 
             <div class="form-group">
-                <label class="required">Nombre de la Especialidad</label>
-                <input type="text" class="form-input"
-                       value="${esp.nombreEspecialidad}"
-                       onchange="actualizarEspecialidad(${index}, 'nombreEspecialidad', this.value)"
-                       placeholder="Ej: Electricidad Residencial, Plomería, Carpintería..."
-                       required>
+                <label class="required">Categoría de Servicio</label>
+                <select class="form-select"
+                        onchange="actualizarCategoriaEspecialidad(${index}, this.value)"
+                        required>
+                    ${appState.categorias.map(cat => 
+                        `<option value="${cat.id}" ${esp.categoriaId === cat.id ? 'selected' : ''}>
+                            ${cat.icono || '📋'} ${cat.nombre}
+                        </option>`
+                    ).join('')}
+                </select>
             </div>
 
             <div class="form-group">
@@ -272,6 +411,19 @@ function renderizarEspecialidades() {
     });
 }
 
+function actualizarCategoriaEspecialidad(index, categoriaId) {
+    categoriaId = parseInt(categoriaId);
+    
+    if (appState.especialidades[index]) {
+        appState.especialidades[index].categoriaId = categoriaId;
+        
+        const categoria = appState.categorias.find(c => c.id === categoriaId);
+        if (categoria) {
+            appState.especialidades[index].categoriaNombre = categoria.nombre;
+        }
+    }
+}
+
 function actualizarEspecialidad(index, campo, valor) {
     if (appState.especialidades[index]) {
         appState.especialidades[index][campo] = valor;
@@ -284,7 +436,7 @@ function actualizarBotonesEspecialidades() {
 }
 
 // =====================================================================
-// ÁREA DE SERVICIO
+// ÁREA DE SERVICIO - ✅ CORREGIDO CON CASCADA
 // =====================================================================
 
 function toggleTodoPais() {
@@ -314,9 +466,14 @@ function agregarUbicacion(datosExistentes = null) {
     const ubicacion = {
         orden: index + 1,
         tipoUbicacion: datosExistentes?.tipoUbicacion || 'departamento',
+        departamentoId: datosExistentes?.departamentoId || null,
         departamento: datosExistentes?.departamento || '',
+        provinciaId: datosExistentes?.provinciaId || null,
         provincia: datosExistentes?.provincia || '',
-        distrito: datosExistentes?.distrito || ''
+        distritoId: datosExistentes?.distritoId || null,
+        distrito: datosExistentes?.distrito || '',
+        provinciasDisponibles: [],
+        distritosDisponibles: []
     };
 
     appState.ubicaciones.push(ubicacion);
@@ -327,13 +484,98 @@ function agregarUbicacion(datosExistentes = null) {
 function eliminarUbicacion(index) {
     appState.ubicaciones.splice(index, 1);
 
-    // Reordenar
     appState.ubicaciones.forEach((ub, i) => {
         ub.orden = i + 1;
     });
 
     renderizarUbicaciones();
     actualizarBotonesUbicaciones();
+}
+
+// ✅ NUEVO - Manejar cambio de departamento (cargar provincias)
+async function onDepartamentoChange(index, departamentoId) {
+    const ubicacion = appState.ubicaciones[index];
+    if (!ubicacion) return;
+
+    ubicacion.departamentoId = parseInt(departamentoId);
+    
+    // Buscar el nombre del departamento
+    const dept = appState.departamentos.find(d => d.id === ubicacion.departamentoId);
+    if (dept) {
+        ubicacion.departamento = dept.nombre;
+    }
+
+    // Resetear provincia y distrito
+    ubicacion.provinciaId = null;
+    ubicacion.provincia = '';
+    ubicacion.distritoId = null;
+    ubicacion.distrito = '';
+    ubicacion.distritosDisponibles = [];
+
+    // Cargar provincias
+    if (ubicacion.tipoUbicacion !== 'departamento') {
+        ubicacion.provinciasDisponibles = await cargarProvincias(departamentoId);
+    }
+
+    renderizarUbicaciones();
+}
+
+// ✅ NUEVO - Manejar cambio de provincia (cargar distritos)
+async function onProvinciaChange(index, provinciaId) {
+    const ubicacion = appState.ubicaciones[index];
+    if (!ubicacion) return;
+
+    ubicacion.provinciaId = parseInt(provinciaId);
+    
+    // Buscar el nombre de la provincia
+    const prov = ubicacion.provinciasDisponibles.find(p => p.id === ubicacion.provinciaId);
+    if (prov) {
+        ubicacion.provincia = prov.nombre;
+    }
+
+    // Resetear distrito
+    ubicacion.distritoId = null;
+    ubicacion.distrito = '';
+
+    // Cargar distritos
+    if (ubicacion.tipoUbicacion === 'distrito') {
+        ubicacion.distritosDisponibles = await cargarDistritos(provinciaId);
+    }
+
+    renderizarUbicaciones();
+}
+
+// ✅ NUEVO - Manejar cambio de distrito
+function onDistritoChange(index, distritoId) {
+    const ubicacion = appState.ubicaciones[index];
+    if (!ubicacion) return;
+
+    ubicacion.distritoId = parseInt(distritoId);
+    
+    // Buscar el nombre del distrito
+    const dist = ubicacion.distritosDisponibles.find(d => d.id === ubicacion.distritoId);
+    if (dist) {
+        ubicacion.distrito = dist.nombre;
+    }
+}
+
+// ✅ NUEVO - Manejar cambio de tipo de ubicación
+async function onTipoUbicacionChange(index, tipoUbicacion) {
+    const ubicacion = appState.ubicaciones[index];
+    if (!ubicacion) return;
+
+    ubicacion.tipoUbicacion = tipoUbicacion;
+
+    // Si cambia el tipo, cargar datos necesarios
+    if (tipoUbicacion !== 'departamento' && ubicacion.departamentoId && ubicacion.provinciasDisponibles.length === 0) {
+        ubicacion.provinciasDisponibles = await cargarProvincias(ubicacion.departamentoId);
+    }
+
+    if (tipoUbicacion === 'distrito' && ubicacion.provinciaId && ubicacion.distritosDisponibles.length === 0) {
+        ubicacion.distritosDisponibles = await cargarDistritos(ubicacion.provinciaId);
+    }
+
+    renderizarUbicaciones();
 }
 
 function renderizarUbicaciones() {
@@ -359,7 +601,7 @@ function renderizarUbicaciones() {
             <div class="form-group">
                 <label class="required">Nivel de Ubicación</label>
                 <select class="form-select"
-                        onchange="actualizarUbicacion(${index}, 'tipoUbicacion', this.value); renderizarUbicaciones();"
+                        onchange="onTipoUbicacionChange(${index}, this.value)"
                         required>
                     <option value="departamento" ${ub.tipoUbicacion === 'departamento' ? 'selected' : ''}>Departamento</option>
                     <option value="provincia" ${ub.tipoUbicacion === 'provincia' ? 'selected' : ''}>Provincia</option>
@@ -371,23 +613,28 @@ function renderizarUbicaciones() {
                 <div class="form-group">
                     <label class="required">Departamento</label>
                     <select class="form-select"
-                            onchange="actualizarUbicacion(${index}, 'departamento', this.value)"
+                            onchange="onDepartamentoChange(${index}, this.value)"
                             required>
                         <option value="">Seleccione...</option>
-                        ${departamentosPeru.map(dep =>
-                            `<option value="${dep}" ${ub.departamento === dep ? 'selected' : ''}>${dep}</option>`
+                        ${appState.departamentos.map(dept =>
+                            `<option value="${dept.id}" ${ub.departamentoId === dept.id ? 'selected' : ''}>${dept.nombre}</option>`
                         ).join('')}
                     </select>
                 </div>
 
                 ${ub.tipoUbicacion !== 'departamento' ? `
                     <div class="form-group">
-                        <label ${ub.tipoUbicacion === 'provincia' || ub.tipoUbicacion === 'distrito' ? 'class="required"' : ''}>Provincia</label>
-                        <input type="text" class="form-input"
-                               value="${ub.provincia}"
-                               onchange="actualizarUbicacion(${index}, 'provincia', this.value)"
-                               placeholder="Ingrese la provincia"
-                               ${ub.tipoUbicacion === 'provincia' || ub.tipoUbicacion === 'distrito' ? 'required' : ''}>
+                        <label class="required">Provincia</label>
+                        <select class="form-select"
+                                onchange="onProvinciaChange(${index}, this.value)"
+                                ${!ub.departamentoId ? 'disabled' : ''}
+                                required>
+                            <option value="">Seleccione...</option>
+                            ${(ub.provinciasDisponibles || []).map(prov =>
+                                `<option value="${prov.id}" ${ub.provinciaId === prov.id ? 'selected' : ''}>${prov.nombre}</option>`
+                            ).join('')}
+                        </select>
+                        ${!ub.departamentoId ? '<small style="color: var(--medium-gray);">Primero seleccione un departamento</small>' : ''}
                     </div>
                 ` : ''}
             </div>
@@ -395,23 +642,22 @@ function renderizarUbicaciones() {
             ${ub.tipoUbicacion === 'distrito' ? `
                 <div class="form-group">
                     <label class="required">Distrito</label>
-                    <input type="text" class="form-input"
-                           value="${ub.distrito}"
-                           onchange="actualizarUbicacion(${index}, 'distrito', this.value)"
-                           placeholder="Ingrese el distrito"
-                           required>
+                    <select class="form-select"
+                            onchange="onDistritoChange(${index}, this.value)"
+                            ${!ub.provinciaId ? 'disabled' : ''}
+                            required>
+                        <option value="">Seleccione...</option>
+                        ${(ub.distritosDisponibles || []).map(dist =>
+                            `<option value="${dist.id}" ${ub.distritoId === dist.id ? 'selected' : ''}>${dist.nombre}</option>`
+                        ).join('')}
+                    </select>
+                    ${!ub.provinciaId ? '<small style="color: var(--medium-gray);">Primero seleccione una provincia</small>' : ''}
                 </div>
             ` : ''}
         `;
 
         container.appendChild(div);
     });
-}
-
-function actualizarUbicacion(index, campo, valor) {
-    if (appState.ubicaciones[index]) {
-        appState.ubicaciones[index][campo] = valor;
-    }
 }
 
 function actualizarBotonesUbicaciones() {
@@ -445,7 +691,6 @@ function agregarHorario(datosExistentes = null) {
         return;
     }
 
-    // Encontrar días disponibles
     const diasUsados = appState.horarios.map(h => h.diaSemana);
     const diasDisponibles = diasSemana.filter(d => !diasUsados.includes(d));
 
@@ -481,7 +726,6 @@ function renderizarHorarios() {
         return;
     }
 
-    // Encontrar días disponibles
     const diasUsados = appState.horarios.map(h => h.diaSemana);
     const diasDisponibles = diasSemana.filter(d => !diasUsados.includes(d));
 
@@ -567,18 +811,29 @@ function actualizarBotonesHorarios() {
 async function enviarFormulario(event) {
     event.preventDefault();
 
-    // Validaciones
     if (!validarFormulario()) {
         return;
     }
 
-    // Construir objeto de datos
     const datosServicio = {
-        profesionalId: appState.profesionalId,
-        especialidades: appState.especialidades,
+        usuarioId: appState.usuarioId,
+        especialidades: appState.especialidades.map(esp => ({
+            categoriaId: esp.categoriaId,
+            descripcion: esp.descripcion || '',
+            incluyeMateriales: esp.incluyeMateriales || false,
+            costo: parseFloat(esp.costo),
+            tipoCosto: esp.tipoCosto,
+            esPrincipal: esp.esPrincipal || false
+        })),
         areaServicio: {
             todoPais: appState.todoPais,
-            ubicaciones: appState.todoPais ? [] : appState.ubicaciones
+            ubicaciones: appState.todoPais ? [] : appState.ubicaciones.map(ub => ({
+                tipoUbicacion: ub.tipoUbicacion,
+                departamento: ub.departamento,
+                provincia: ub.provincia || null,
+                distrito: ub.distrito || null,
+                orden: ub.orden
+            }))
         },
         disponibilidad: {
             todoTiempo: appState.todoTiempo,
@@ -592,7 +847,7 @@ async function enviarFormulario(event) {
 
     try {
         const url = './api/servicios-profesional';
-        const method = 'POST'; // El servlet manejará create o update internamente
+        const method = 'POST';
 
         const response = await fetch(url, {
             method: method,
@@ -607,7 +862,6 @@ async function enviarFormulario(event) {
         if (data.success) {
             mostrarAlerta('success', data.message || 'Servicios guardados exitosamente');
 
-            // Redirigir al dashboard después de 2 segundos
             setTimeout(() => {
                 window.location.href = 'dashboard.html';
             }, 2000);
@@ -624,7 +878,11 @@ async function enviarFormulario(event) {
 }
 
 function validarFormulario() {
-    // Validar especialidades
+    if (appState.categorias.length === 0) {
+        mostrarAlerta('error', 'No se pudieron cargar las categorías de servicio. Por favor, recargue la página.');
+        return false;
+    }
+
     if (appState.especialidades.length === 0) {
         mostrarAlerta('error', 'Debe agregar al menos una especialidad');
         return false;
@@ -635,12 +893,11 @@ function validarFormulario() {
         return false;
     }
 
-    // Validar que todas las especialidades tengan datos completos
     for (let i = 0; i < appState.especialidades.length; i++) {
         const esp = appState.especialidades[i];
 
-        if (!esp.nombreEspecialidad || esp.nombreEspecialidad.trim() === '') {
-            mostrarAlerta('error', `La especialidad ${i + 1} debe tener un nombre`);
+        if (!esp.categoriaId) {
+            mostrarAlerta('error', `La especialidad ${i + 1} debe tener una categoría seleccionada`);
             return false;
         }
 
@@ -655,14 +912,12 @@ function validarFormulario() {
         }
     }
 
-    // Verificar que haya al menos una especialidad principal
     const tienePrincipal = appState.especialidades.some(esp => esp.esPrincipal);
     if (!tienePrincipal) {
         mostrarAlerta('error', 'Debe marcar al menos una especialidad como principal');
         return false;
     }
 
-    // Validar área de servicio
     if (!appState.todoPais) {
         if (appState.ubicaciones.length === 0) {
             mostrarAlerta('error', 'Debe agregar al menos una ubicación de servicio o marcar "Todo el país"');
@@ -674,7 +929,6 @@ function validarFormulario() {
             return false;
         }
 
-        // Validar cada ubicación
         for (let i = 0; i < appState.ubicaciones.length; i++) {
             const ub = appState.ubicaciones[i];
 
@@ -699,14 +953,12 @@ function validarFormulario() {
         }
     }
 
-    // Validar disponibilidad
     if (!appState.todoTiempo) {
         if (appState.horarios.length === 0) {
             mostrarAlerta('error', 'Debe agregar al menos un horario o marcar "Todo el tiempo"');
             return false;
         }
 
-        // Validar cada horario
         for (let i = 0; i < appState.horarios.length; i++) {
             const hor = appState.horarios[i];
 
@@ -721,7 +973,6 @@ function validarFormulario() {
                     return false;
                 }
 
-                // Validar que hora fin sea mayor que hora inicio
                 if (hor.horaInicio >= hor.horaFin) {
                     mostrarAlerta('error', `El horario para ${hor.diaSemana} tiene horas inválidas (la hora de fin debe ser mayor que la de inicio)`);
                     return false;
@@ -747,13 +998,11 @@ function mostrarAlerta(tipo, mensaje) {
     container.innerHTML = '';
     container.appendChild(alert);
 
-    // Auto-ocultar después de 5 segundos
     setTimeout(() => {
         alert.classList.remove('show');
         setTimeout(() => alert.remove(), 300);
     }, 5000);
 
-    // Scroll al inicio
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 

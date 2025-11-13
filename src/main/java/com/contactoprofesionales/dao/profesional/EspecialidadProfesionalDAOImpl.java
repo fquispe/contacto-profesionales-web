@@ -9,36 +9,73 @@ import org.slf4j.LoggerFactory;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Implementación de EspecialidadProfesionalDAO usando JDBC para PostgreSQL con HikariCP
  * Utiliza try-with-resources para gestión automática de recursos
+ * VERSIÓN CORREGIDA: Alineada con la estructura real de la tabla especialidades_profesional
  */
 public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDAO {
 
     private static final Logger logger = LoggerFactory.getLogger(EspecialidadProfesionalDAOImpl.class);
 
+    // CORREGIDO: INSERT con los campos reales de la tabla
     private static final String INSERT_ESPECIALIDAD =
-        "INSERT INTO especialidades_profesional (profesional_id, categoria_id, es_principal, " +
-        "anios_experiencia, descripcion, fecha_creacion) " +
-        "VALUES (?, ?, ?, ?, ?, ?) RETURNING id";
+        "INSERT INTO especialidades_profesional (profesional_id, categoria_id, descripcion, " +
+        "incluye_materiales, costo, tipo_costo, es_principal, orden, " +
+        "fecha_creacion, fecha_actualizacion, activo) " +
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), true) RETURNING id";
 
+    // CORREGIDO: SELECT incluyendo todos los campos y más datos de categoría
     private static final String SELECT_BY_PROFESIONAL =
-        "SELECT e.*, c.nombre AS categoria_nombre, c.descripcion AS categoria_descripcion " +
+        "SELECT e.id, e.profesional_id, e.categoria_id, e.descripcion, e.incluye_materiales, " +
+        "e.costo, e.tipo_costo, e.es_principal, e.orden, e.fecha_creacion, " +
+        "e.fecha_actualizacion, e.activo, " +
+        "c.nombre AS categoria_nombre, c.descripcion AS categoria_descripcion, " +
+        "c.icono AS categoria_icono, c.color AS categoria_color " +
         "FROM especialidades_profesional e " +
         "INNER JOIN categorias_servicio c ON e.categoria_id = c.id " +
-        "WHERE e.profesional_id = ? " +
-        "ORDER BY e.es_principal DESC, e.fecha_creacion ASC";
+        "WHERE e.profesional_id = ? AND e.activo = true " +
+        "ORDER BY e.orden ASC";
 
+    private static final String SELECT_BY_ID =
+        "SELECT e.id, e.profesional_id, e.categoria_id, e.descripcion, e.incluye_materiales, " +
+        "e.costo, e.tipo_costo, e.es_principal, e.orden, e.fecha_creacion, " +
+        "e.fecha_actualizacion, e.activo, " +
+        "c.nombre AS categoria_nombre, c.descripcion AS categoria_descripcion, " +
+        "c.icono AS categoria_icono, c.color AS categoria_color " +
+        "FROM especialidades_profesional e " +
+        "INNER JOIN categorias_servicio c ON e.categoria_id = c.id " +
+        "WHERE e.id = ? AND e.activo = true";
+
+    // CORREGIDO: UPDATE para actualizar especialidades
+    private static final String UPDATE_ESPECIALIDAD =
+        "UPDATE especialidades_profesional " +
+        "SET descripcion = ?, incluye_materiales = ?, costo = ?, tipo_costo = ?, " +
+        "fecha_actualizacion = NOW() " +
+        "WHERE id = ? AND activo = true";
+
+    // CORREGIDO: Soft delete en lugar de DELETE físico
     private static final String DELETE_ESPECIALIDAD =
-        "DELETE FROM especialidades_profesional WHERE id = ?";
+        "UPDATE especialidades_profesional SET activo = false, fecha_actualizacion = NOW() " +
+        "WHERE id = ?";
 
     private static final String DESMARCAR_PRINCIPAL =
-        "UPDATE especialidades_profesional SET es_principal = false " +
+        "UPDATE especialidades_profesional SET es_principal = false, fecha_actualizacion = NOW() " +
         "WHERE profesional_id = ? AND es_principal = true";
 
     private static final String MARCAR_PRINCIPAL =
-        "UPDATE especialidades_profesional SET es_principal = true WHERE id = ?";
+        "UPDATE especialidades_profesional SET es_principal = true, fecha_actualizacion = NOW() " +
+        "WHERE id = ?";
+
+    private static final String COUNT_BY_PROFESIONAL =
+        "SELECT COUNT(*) AS total FROM especialidades_profesional " +
+        "WHERE profesional_id = ? AND activo = true";
+
+    private static final String EXISTS_BY_CATEGORIA =
+        "SELECT COUNT(*) AS existe FROM especialidades_profesional " +
+        "WHERE profesional_id = ? AND categoria_id = ? AND activo = true";
 
     @Override
     public EspecialidadProfesional registrar(EspecialidadProfesional especialidad) throws DatabaseException {
@@ -51,6 +88,16 @@ public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDA
         if (especialidad.getCategoriaId() == null) {
             throw new DatabaseException("El ID de la categoría no puede ser nulo");
         }
+        // NUEVO: Validar campos obligatorios
+        if (especialidad.getCosto() == null) {
+            throw new DatabaseException("El costo no puede ser nulo");
+        }
+        if (especialidad.getTipoCosto() == null) {
+            throw new DatabaseException("El tipo de costo no puede ser nulo");
+        }
+        if (especialidad.getOrden() == null) {
+            throw new DatabaseException("El orden no puede ser nulo");
+        }
 
         logger.debug("Registrando nueva especialidad para profesional ID: {}", especialidad.getProfesionalId());
 
@@ -60,10 +107,22 @@ public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDA
             int index = 1;
             ps.setInt(index++, especialidad.getProfesionalId());
             ps.setInt(index++, especialidad.getCategoriaId());
-            ps.setBoolean(index++, especialidad.getEsPrincipal() != null ? especialidad.getEsPrincipal() : false);
-            ps.setObject(index++, especialidad.getAniosExperiencia());
-            ps.setString(index++, especialidad.getDescripcion());
-            ps.setTimestamp(index++, Timestamp.valueOf(java.time.LocalDateTime.now()));
+            
+            // Descripción (puede ser null)
+            if (especialidad.getDescripcion() != null) {
+                ps.setString(index++, especialidad.getDescripcion());
+            } else {
+                ps.setNull(index++, Types.VARCHAR);
+            }
+            
+            // CAMPOS NUEVOS correctos
+            ps.setBoolean(index++, especialidad.getIncluyeMateriales() != null ? 
+                         especialidad.getIncluyeMateriales() : false);
+            ps.setDouble(index++, especialidad.getCosto());
+            ps.setString(index++, especialidad.getTipoCosto());
+            ps.setBoolean(index++, especialidad.getEsPrincipal() != null ? 
+                         especialidad.getEsPrincipal() : false);
+            ps.setInt(index++, especialidad.getOrden());
 
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
@@ -81,6 +140,36 @@ public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDA
                 throw new DatabaseException("Error de integridad: verifique que el profesional y la categoría existan", e);
             }
             throw new DatabaseException("Error al registrar especialidad: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public Optional<EspecialidadProfesional> buscarPorId(Integer id) throws DatabaseException {
+        if (id == null) {
+            throw new DatabaseException("El ID no puede ser nulo");
+        }
+
+        logger.debug("Buscando especialidad ID: {}", id);
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(SELECT_BY_ID)) {
+
+            ps.setInt(1, id);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    EspecialidadProfesional especialidad = mapEspecialidad(rs);
+                    logger.debug("Especialidad encontrada: {}", id);
+                    return Optional.of(especialidad);
+                }
+            }
+
+            logger.debug("No se encontró especialidad con ID: {}", id);
+            return Optional.empty();
+
+        } catch (SQLException e) {
+            logger.error("Error al buscar especialidad", e);
+            throw new DatabaseException("Error al buscar especialidad: " + e.getMessage(), e);
         }
     }
 
@@ -104,7 +193,8 @@ public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDA
                 }
             }
 
-            logger.info("Se encontraron {} especialidades para el profesional {}", especialidades.size(), profesionalId);
+            logger.info("Se encontraron {} especialidades para el profesional {}", 
+                       especialidades.size(), profesionalId);
             return especialidades;
 
         } catch (SQLException e) {
@@ -114,12 +204,55 @@ public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDA
     }
 
     @Override
+    public EspecialidadProfesional actualizar(EspecialidadProfesional especialidad) throws DatabaseException {
+        if (especialidad == null || especialidad.getId() == null) {
+            throw new DatabaseException("La especialidad y su ID no pueden ser nulos");
+        }
+
+        logger.debug("Actualizando especialidad ID: {}", especialidad.getId());
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(UPDATE_ESPECIALIDAD)) {
+
+            int index = 1;
+            
+            // Descripción (puede ser null)
+            if (especialidad.getDescripcion() != null) {
+                ps.setString(index++, especialidad.getDescripcion());
+            } else {
+                ps.setNull(index++, Types.VARCHAR);
+            }
+            
+            ps.setBoolean(index++, especialidad.getIncluyeMateriales());
+            ps.setDouble(index++, especialidad.getCosto());
+            ps.setString(index++, especialidad.getTipoCosto());
+            ps.setInt(index++, especialidad.getId());
+
+            int rowsAffected = ps.executeUpdate();
+
+            if (rowsAffected == 0) {
+                throw new DatabaseException("No se encontró la especialidad a actualizar");
+            }
+
+            logger.info("Especialidad actualizada exitosamente: {}", especialidad.getId());
+            
+            // Recargar la especialidad desde la BD
+            return buscarPorId(especialidad.getId())
+                .orElseThrow(() -> new DatabaseException("Error al recargar especialidad actualizada"));
+
+        } catch (SQLException e) {
+            logger.error("Error al actualizar especialidad", e);
+            throw new DatabaseException("Error al actualizar especialidad: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
     public boolean eliminar(Integer id) throws DatabaseException {
         if (id == null) {
             throw new DatabaseException("El ID no puede ser nulo");
         }
 
-        logger.debug("Eliminando especialidad ID: {}", id);
+        logger.debug("Eliminando (soft delete) especialidad ID: {}", id);
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(DELETE_ESPECIALIDAD)) {
@@ -128,7 +261,7 @@ public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDA
 
             int rowsAffected = ps.executeUpdate();
             if (rowsAffected > 0) {
-                logger.info("Especialidad eliminada: {}", id);
+                logger.info("Especialidad eliminada (soft delete): {}", id);
                 return true;
             }
             return false;
@@ -198,31 +331,110 @@ public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDA
         }
     }
 
+    @Override
+    public int contarPorProfesional(Integer profesionalId) throws DatabaseException {
+        if (profesionalId == null) {
+            throw new DatabaseException("El ID del profesional no puede ser nulo");
+        }
+
+        logger.debug("Contando especialidades para profesional ID: {}", profesionalId);
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(COUNT_BY_PROFESIONAL)) {
+
+            ps.setInt(1, profesionalId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    int total = rs.getInt("total");
+                    logger.debug("Profesional {} tiene {} especialidades", profesionalId, total);
+                    return total;
+                }
+            }
+
+            return 0;
+
+        } catch (SQLException e) {
+            logger.error("Error al contar especialidades", e);
+            throw new DatabaseException("Error al contar especialidades: " + e.getMessage(), e);
+        }
+    }
+
+    @Override
+    public boolean existeEspecialidadConCategoria(Integer profesionalId, Integer categoriaId) 
+            throws DatabaseException {
+        if (profesionalId == null || categoriaId == null) {
+            throw new DatabaseException("Los IDs no pueden ser nulos");
+        }
+
+        logger.debug("Verificando si profesional {} tiene categoría {}", profesionalId, categoriaId);
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(EXISTS_BY_CATEGORIA)) {
+
+            ps.setInt(1, profesionalId);
+            ps.setInt(2, categoriaId);
+
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    boolean existe = rs.getInt("existe") > 0;
+                    logger.debug("Especialidad {} para profesional {}: {}", 
+                               categoriaId, profesionalId, existe ? "existe" : "no existe");
+                    return existe;
+                }
+            }
+
+            return false;
+
+        } catch (SQLException e) {
+            logger.error("Error al verificar especialidad", e);
+            throw new DatabaseException("Error al verificar existencia de especialidad: " + e.getMessage(), e);
+        }
+    }
+
     /**
      * Mapea un ResultSet a un objeto EspecialidadProfesional
-     * Incluye datos de la categoría mediante JOIN
+     * Incluye todos los campos de la tabla y datos de la categoría mediante JOIN
      */
     private EspecialidadProfesional mapEspecialidad(ResultSet rs) throws SQLException {
         EspecialidadProfesional especialidad = new EspecialidadProfesional();
 
+        // Campos de la tabla especialidades_profesional
         especialidad.setId(rs.getInt("id"));
         especialidad.setProfesionalId(rs.getInt("profesional_id"));
         especialidad.setCategoriaId(rs.getInt("categoria_id"));
+        
+        String descripcion = rs.getString("descripcion");
+        especialidad.setDescripcion(rs.wasNull() ? null : descripcion);
+        
+        especialidad.setIncluyeMateriales(rs.getBoolean("incluye_materiales"));
+        especialidad.setCosto(rs.getDouble("costo"));
+        especialidad.setTipoCosto(rs.getString("tipo_costo"));
         especialidad.setEsPrincipal(rs.getBoolean("es_principal"));
-
-        Integer aniosExperiencia = (Integer) rs.getObject("anios_experiencia");
-        especialidad.setAniosExperiencia(aniosExperiencia);
-
-        especialidad.setDescripcion(rs.getString("descripcion"));
+        especialidad.setOrden(rs.getInt("orden"));
 
         Timestamp fechaCreacion = rs.getTimestamp("fecha_creacion");
         if (fechaCreacion != null) {
             especialidad.setFechaCreacion(fechaCreacion.toLocalDateTime());
         }
 
+        Timestamp fechaActualizacion = rs.getTimestamp("fecha_actualizacion");
+        if (fechaActualizacion != null) {
+            especialidad.setFechaActualizacion(fechaActualizacion.toLocalDateTime());
+        }
+
+        especialidad.setActivo(rs.getBoolean("activo"));
+
         // Datos de la categoría (del JOIN)
-        especialidad.setCategoriaNombre(rs.getString("categoria_nombre"));
-        especialidad.setCategoriaDescripcion(rs.getString("categoria_descripcion"));
+        try {
+            especialidad.setCategoriaNombre(rs.getString("categoria_nombre"));
+            especialidad.setCategoriaDescripcion(rs.getString("categoria_descripcion"));
+            especialidad.setCategoriaIcono(rs.getString("categoria_icono"));
+            especialidad.setCategoriaColor(rs.getString("categoria_color"));
+        } catch (SQLException e) {
+            // Estos campos podrían no estar presentes en algunas queries
+            logger.debug("Campos de categoría no disponibles en el ResultSet");
+        }
 
         return especialidad;
     }

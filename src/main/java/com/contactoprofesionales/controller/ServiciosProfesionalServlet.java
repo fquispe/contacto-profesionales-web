@@ -4,6 +4,7 @@ import com.contactoprofesionales.dao.ServiciosProfesionalDAO;
 import com.contactoprofesionales.dao.ServiciosProfesionalDAOImpl;
 import com.contactoprofesionales.dto.ServiciosProfesionalCompleto;
 import com.contactoprofesionales.model.*;
+import com.contactoprofesionales.util.DatabaseConnection;
 import com.google.gson.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,10 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
@@ -30,7 +35,11 @@ import java.time.format.DateTimeFormatter;
 @WebServlet("/api/servicios-profesional")
 public class ServiciosProfesionalServlet extends HttpServlet {
 
-    private static final Logger logger = LoggerFactory.getLogger(ServiciosProfesionalServlet.class);
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private static final Logger logger = LoggerFactory.getLogger(ServiciosProfesionalServlet.class);
     private ServiciosProfesionalDAO serviciosDAO;
     private Gson gson;
 
@@ -49,42 +58,60 @@ public class ServiciosProfesionalServlet extends HttpServlet {
         logger.info("ServiciosProfesionalServlet inicializado");
     }
 
-    @Override
-    protected void doGet(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+	 // ============================================================================
+	 // ✅ MÉTODO doGet TAMBIÉN ACTUALIZADO
+	 // ============================================================================
+	
+	 @Override
+	 protected void doGet(HttpServletRequest request, HttpServletResponse response)
+	         throws ServletException, IOException {
+	
+	     configurarCORS(response);
+	
+	     // ✅ CAMBIO: Recibir usuarioId en lugar de profesionalId
+	     String usuarioIdStr = request.getParameter("usuarioId");
+	
+	     if (usuarioIdStr == null || usuarioIdStr.trim().isEmpty()) {
+	         enviarError(response, 400, "El parámetro 'usuarioId' es requerido");
+	         return;
+	     }
+	
+	     try {
+	         Integer usuarioId = Integer.parseInt(usuarioIdStr);
+	         
+	         // ✅ Buscar profesionalId
+	         Integer profesionalId = buscarProfesionalIdPorUsuarioId(usuarioId);
+	         
+	         if (profesionalId == null) {
+	             enviarError(response, 404, "El usuario no tiene un perfil de profesional");
+	             return;
+	         }
+	
+	         logger.info("Obteniendo servicios del profesional {}", profesionalId);
+	
+	         ServiciosProfesionalCompleto servicios = serviciosDAO.obtenerServiciosProfesional(profesionalId);
+	
+	         JsonObject jsonResponse = new JsonObject();
+	         jsonResponse.addProperty("success", true);
+	         jsonResponse.addProperty("message", "Servicios obtenidos exitosamente");
+	         jsonResponse.add("data", gson.toJsonTree(servicios));
+	
+	         enviarRespuesta(response, 200, jsonResponse);
+	
+	     } catch (NumberFormatException e) {
+	         logger.error("ID de usuario inválido: {}", usuarioIdStr);
+	         enviarError(response, 400, "ID de usuario inválido");
+	     } catch (Exception e) {
+	         logger.error("Error obteniendo servicios", e);
+	         enviarError(response, 500, "Error interno del servidor: " + e.getMessage());
+	     }
+	 }
 
-        configurarCORS(response);
-
-        String profesionalIdStr = request.getParameter("profesionalId");
-
-        if (profesionalIdStr == null || profesionalIdStr.trim().isEmpty()) {
-            enviarError(response, 400, "El parámetro 'profesionalId' es requerido");
-            return;
-        }
-
-        try {
-            Integer profesionalId = Integer.parseInt(profesionalIdStr);
-
-            logger.info("Obteniendo servicios del profesional {}", profesionalId);
-
-            ServiciosProfesionalCompleto servicios = serviciosDAO.obtenerServiciosProfesional(profesionalId);
-
-            JsonObject jsonResponse = new JsonObject();
-            jsonResponse.addProperty("success", true);
-            jsonResponse.addProperty("message", "Servicios obtenidos exitosamente");
-            jsonResponse.add("data", gson.toJsonTree(servicios));
-
-            enviarRespuesta(response, 200, jsonResponse);
-
-        } catch (NumberFormatException e) {
-            logger.error("ID de profesional inválido: {}", profesionalIdStr);
-            enviarError(response, 400, "ID de profesional inválido");
-        } catch (Exception e) {
-            logger.error("Error obteniendo servicios", e);
-            enviarError(response, 500, "Error interno del servidor: " + e.getMessage());
-        }
-    }
-
+	// ============================================================================
+	// FRAGMENTO CORREGIDO: ServiciosProfesionalServlet.java
+	// Busca profesionalId desde usuarioId de forma segura en el backend
+	// ============================================================================
+	 
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
@@ -106,14 +133,27 @@ public class ServiciosProfesionalServlet extends HttpServlet {
             // Parsear JSON
             JsonObject jsonRequest = JsonParser.parseString(jsonBody).getAsJsonObject();
 
-            // Validar que tenga profesionalId
-            if (!jsonRequest.has("profesionalId")) {
-                enviarError(response, 400, "El campo 'profesionalId' es requerido");
+            // ✅ CAMBIO 1: Recibir usuarioId en lugar de profesionalId
+            if (!jsonRequest.has("usuarioId")) {
+                enviarError(response, 400, "El campo 'usuarioId' es requerido");
                 return;
             }
 
-            Integer profesionalId = jsonRequest.get("profesionalId").getAsInt();
+            Integer usuarioId = jsonRequest.get("usuarioId").getAsInt();
+            logger.info("Usuario ID recibido: {}", usuarioId);
 
+            // ✅ CAMBIO 2: Buscar el profesionalId correspondiente al usuarioId
+            Integer profesionalId = buscarProfesionalIdPorUsuarioId(usuarioId);
+            
+            if (profesionalId == null) {
+                logger.error("Usuario {} no tiene un perfil de profesional activo", usuarioId);
+                enviarError(response, 400, "El usuario no tiene un perfil de profesional. Complete su perfil primero.");
+                return;
+            }
+            
+            logger.info("✓ Profesional ID encontrado: {} para usuario ID: {}", profesionalId, usuarioId);
+
+            // ✅ CAMBIO 3: Ahora usar profesionalId para todas las operaciones
             // Parsear especialidades
             JsonArray especialidadesJson = jsonRequest.getAsJsonArray("especialidades");
             java.util.List<EspecialidadProfesional> especialidades = parsearEspecialidades(especialidadesJson, profesionalId);
@@ -175,112 +215,168 @@ public class ServiciosProfesionalServlet extends HttpServlet {
         }
     }
 
-    @Override
-    protected void doPut(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+	 // ============================================================================
+	 // ✅ NUEVO MÉTODO: Buscar profesionalId desde usuarioId
+	 // ============================================================================
+	
+	 /**
+	  * Busca el ID del profesional asociado a un usuario.
+	  * Este método encapsula la lógica de seguridad para evitar exponer
+	  * relaciones de tablas en el frontend.
+	  * 
+	  * @param usuarioId ID del usuario autenticado
+	  * @return ID del profesional, o null si no existe o no está activo
+	  */
+	 private Integer buscarProfesionalIdPorUsuarioId(Integer usuarioId) {
+	     String sql = "SELECT id FROM profesionales WHERE usuario_id = ? AND activo = TRUE";
+	     
+	     try (Connection conn = DatabaseConnection.getConnection();
+	          PreparedStatement stmt = conn.prepareStatement(sql)) {
+	         
+	         stmt.setInt(1, usuarioId);
+	         ResultSet rs = stmt.executeQuery();
+	         
+	         if (rs.next()) {
+	             Integer profesionalId = rs.getInt("id");
+	             logger.debug("Profesional ID {} encontrado para usuario ID {}", profesionalId, usuarioId);
+	             return profesionalId;
+	         } else {
+	             logger.warn("No se encontró profesional para usuario ID {}", usuarioId);
+	             return null;
+	         }
+	         
+	     } catch (SQLException e) {
+	         logger.error("Error buscando profesional para usuario {}", usuarioId, e);
+	         return null;
+	     }
+	 }
+    
+	// ============================================================================
+	// ✅ MÉTODO doPut TAMBIÉN ACTUALIZADO
+	// ============================================================================
 
-        configurarCORS(response);
+	@Override
+	protected void doPut(HttpServletRequest request, HttpServletResponse response)
+	        throws ServletException, IOException {
 
-        try {
-            // Leer el cuerpo de la petición
-            StringBuilder sb = new StringBuilder();
-            BufferedReader reader = request.getReader();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-            String jsonBody = sb.toString();
+	    configurarCORS(response);
 
-            logger.info("Recibiendo solicitud PUT para actualizar servicios: {}", jsonBody);
+	    try {
+	        StringBuilder sb = new StringBuilder();
+	        BufferedReader reader = request.getReader();
+	        String line;
+	        while ((line = reader.readLine()) != null) {
+	            sb.append(line);
+	        }
+	        String jsonBody = sb.toString();
 
-            // Parsear JSON
-            JsonObject jsonRequest = JsonParser.parseString(jsonBody).getAsJsonObject();
+	        logger.info("Recibiendo solicitud PUT para actualizar servicios: {}", jsonBody);
 
-            if (!jsonRequest.has("profesionalId")) {
-                enviarError(response, 400, "El campo 'profesionalId' es requerido");
-                return;
-            }
+	        JsonObject jsonRequest = JsonParser.parseString(jsonBody).getAsJsonObject();
 
-            Integer profesionalId = jsonRequest.get("profesionalId").getAsInt();
+	        // ✅ CAMBIO: Usar usuarioId y buscar profesionalId
+	        if (!jsonRequest.has("usuarioId")) {
+	            enviarError(response, 400, "El campo 'usuarioId' es requerido");
+	            return;
+	        }
 
-            // Parsear especialidades
-            JsonArray especialidadesJson = jsonRequest.getAsJsonArray("especialidades");
-            java.util.List<EspecialidadProfesional> especialidades = parsearEspecialidades(especialidadesJson, profesionalId);
+	        Integer usuarioId = jsonRequest.get("usuarioId").getAsInt();
+	        Integer profesionalId = buscarProfesionalIdPorUsuarioId(usuarioId);
+	        
+	        if (profesionalId == null) {
+	            enviarError(response, 400, "El usuario no tiene un perfil de profesional");
+	            return;
+	        }
 
-            // Parsear área de servicio
-            JsonObject areaServicioJson = jsonRequest.getAsJsonObject("areaServicio");
-            AreaServicio areaServicio = parsearAreaServicio(areaServicioJson, profesionalId);
+	        // Parsear especialidades
+	        JsonArray especialidadesJson = jsonRequest.getAsJsonArray("especialidades");
+	        java.util.List<EspecialidadProfesional> especialidades = parsearEspecialidades(especialidadesJson, profesionalId);
 
-            // Parsear disponibilidad
-            JsonObject disponibilidadJson = jsonRequest.getAsJsonObject("disponibilidad");
-            DisponibilidadHoraria disponibilidad = parsearDisponibilidad(disponibilidadJson, profesionalId);
+	        // Parsear área de servicio
+	        JsonObject areaServicioJson = jsonRequest.getAsJsonObject("areaServicio");
+	        AreaServicio areaServicio = parsearAreaServicio(areaServicioJson, profesionalId);
 
-            // Actualizar
-            boolean actualizado = serviciosDAO.actualizarServiciosProfesional(
-                profesionalId, especialidades, areaServicio, disponibilidad
-            );
+	        // Parsear disponibilidad
+	        JsonObject disponibilidadJson = jsonRequest.getAsJsonObject("disponibilidad");
+	        DisponibilidadHoraria disponibilidad = parsearDisponibilidad(disponibilidadJson, profesionalId);
 
-            if (actualizado) {
-                JsonObject jsonResponse = new JsonObject();
-                jsonResponse.addProperty("success", true);
-                jsonResponse.addProperty("message", "Servicios actualizados exitosamente");
-                jsonResponse.addProperty("profesionalId", profesionalId);
+	        // Actualizar
+	        boolean actualizado = serviciosDAO.actualizarServiciosProfesional(
+	            profesionalId, especialidades, areaServicio, disponibilidad
+	        );
 
-                enviarRespuesta(response, 200, jsonResponse);
-            } else {
-                enviarError(response, 500, "Error actualizando servicios");
-            }
+	        if (actualizado) {
+	            JsonObject jsonResponse = new JsonObject();
+	            jsonResponse.addProperty("success", true);
+	            jsonResponse.addProperty("message", "Servicios actualizados exitosamente");
+	            jsonResponse.addProperty("profesionalId", profesionalId);
 
-        } catch (JsonParseException e) {
-            logger.error("Error parseando JSON", e);
-            enviarError(response, 400, "JSON inválido: " + e.getMessage());
-        } catch (IllegalArgumentException e) {
-            logger.error("Error de validación", e);
-            enviarError(response, 400, "Error de validación: " + e.getMessage());
-        } catch (Exception e) {
-            logger.error("Error procesando solicitud PUT", e);
-            enviarError(response, 500, "Error interno del servidor: " + e.getMessage());
-        }
-    }
+	            enviarRespuesta(response, 200, jsonResponse);
+	        } else {
+	            enviarError(response, 500, "Error actualizando servicios");
+	        }
 
-    @Override
-    protected void doDelete(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
+	    } catch (JsonParseException e) {
+	        logger.error("Error parseando JSON", e);
+	        enviarError(response, 400, "JSON inválido: " + e.getMessage());
+	    } catch (IllegalArgumentException e) {
+	        logger.error("Error de validación", e);
+	        enviarError(response, 400, "Error de validación: " + e.getMessage());
+	    } catch (Exception e) {
+	        logger.error("Error procesando solicitud PUT", e);
+	        enviarError(response, 500, "Error interno del servidor: " + e.getMessage());
+	    }
+	}
 
-        configurarCORS(response);
 
-        String profesionalIdStr = request.getParameter("profesionalId");
+	// ============================================================================
+	// ✅ MÉTODO doDelete TAMBIÉN ACTUALIZADO
+	// ============================================================================
 
-        if (profesionalIdStr == null || profesionalIdStr.trim().isEmpty()) {
-            enviarError(response, 400, "El parámetro 'profesionalId' es requerido");
-            return;
-        }
+	@Override
+	protected void doDelete(HttpServletRequest request, HttpServletResponse response)
+	        throws ServletException, IOException {
 
-        try {
-            Integer profesionalId = Integer.parseInt(profesionalIdStr);
+	    configurarCORS(response);
 
-            logger.info("Eliminando servicios del profesional {}", profesionalId);
+	    String usuarioIdStr = request.getParameter("usuarioId");
 
-            boolean eliminado = serviciosDAO.eliminarServiciosProfesional(profesionalId);
+	    if (usuarioIdStr == null || usuarioIdStr.trim().isEmpty()) {
+	        enviarError(response, 400, "El parámetro 'usuarioId' es requerido");
+	        return;
+	    }
 
-            if (eliminado) {
-                JsonObject jsonResponse = new JsonObject();
-                jsonResponse.addProperty("success", true);
-                jsonResponse.addProperty("message", "Servicios eliminados exitosamente");
+	    try {
+	        Integer usuarioId = Integer.parseInt(usuarioIdStr);
+	        Integer profesionalId = buscarProfesionalIdPorUsuarioId(usuarioId);
+	        
+	        if (profesionalId == null) {
+	            enviarError(response, 404, "El usuario no tiene un perfil de profesional");
+	            return;
+	        }
 
-                enviarRespuesta(response, 200, jsonResponse);
-            } else {
-                enviarError(response, 500, "Error eliminando servicios");
-            }
+	        logger.info("Eliminando servicios del profesional {}", profesionalId);
 
-        } catch (NumberFormatException e) {
-            logger.error("ID de profesional inválido: {}", profesionalIdStr);
-            enviarError(response, 400, "ID de profesional inválido");
-        } catch (Exception e) {
-            logger.error("Error eliminando servicios", e);
-            enviarError(response, 500, "Error interno del servidor: " + e.getMessage());
-        }
-    }
+	        boolean eliminado = serviciosDAO.eliminarServiciosProfesional(profesionalId);
+
+	        if (eliminado) {
+	            JsonObject jsonResponse = new JsonObject();
+	            jsonResponse.addProperty("success", true);
+	            jsonResponse.addProperty("message", "Servicios eliminados exitosamente");
+
+	            enviarRespuesta(response, 200, jsonResponse);
+	        } else {
+	            enviarError(response, 500, "Error eliminando servicios");
+	        }
+
+	    } catch (NumberFormatException e) {
+	        logger.error("ID de usuario inválido: {}", usuarioIdStr);
+	        enviarError(response, 400, "ID de usuario inválido");
+	    } catch (Exception e) {
+	        logger.error("Error eliminando servicios", e);
+	        enviarError(response, 500, "Error interno del servidor: " + e.getMessage());
+	    }
+	}
 
     @Override
     protected void doOptions(HttpServletRequest request, HttpServletResponse response)
@@ -309,7 +405,10 @@ public class ServiciosProfesionalServlet extends HttpServlet {
 
             EspecialidadProfesional esp = new EspecialidadProfesional();
             esp.setProfesionalId(profesionalId);
-            esp.setNombreEspecialidad(espJson.get("nombreEspecialidad").getAsString());
+            
+            // ✅ CAMBIO PRINCIPAL: Usar categoriaId en lugar de nombreEspecialidad
+            esp.setCategoriaId(espJson.get("categoriaId").getAsInt());
+            
             esp.setDescripcion(espJson.has("descripcion") ? espJson.get("descripcion").getAsString() : "");
             esp.setIncluyeMateriales(espJson.has("incluyeMateriales") && espJson.get("incluyeMateriales").getAsBoolean());
             esp.setCosto(espJson.get("costo").getAsDouble());

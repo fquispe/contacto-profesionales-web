@@ -1,5 +1,6 @@
 package com.contactoprofesionales.dao;
 
+import com.contactoprofesionales.dto.ServiciosProfesionalCompleto;
 import com.contactoprofesionales.model.*;
 import java.util.List;
 
