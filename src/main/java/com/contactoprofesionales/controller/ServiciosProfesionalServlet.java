@@ -405,11 +405,21 @@ public class ServiciosProfesionalServlet extends HttpServlet {
 
             EspecialidadProfesional esp = new EspecialidadProfesional();
             esp.setProfesionalId(profesionalId);
-            
-            // ✅ CAMBIO PRINCIPAL: Usar categoriaId en lugar de nombreEspecialidad
+
+            // ✅ Usar categoriaId en lugar de nombreEspecialidad
             esp.setCategoriaId(espJson.get("categoriaId").getAsInt());
-            
-            esp.setDescripcion(espJson.has("descripcion") ? espJson.get("descripcion").getAsString() : "");
+
+            // ✅ NUEVO CAMPO OBLIGATORIO: servicioProfesional
+            String servicioProfesional = getStringFromJson(espJson, "servicioProfesional");
+            if (servicioProfesional == null || servicioProfesional.trim().isEmpty()) {
+                throw new IllegalArgumentException("La especialidad " + (i + 1) + " debe tener un servicio profesional especificado");
+            }
+            esp.setServicioProfesional(servicioProfesional.trim());
+
+            // Usar getStringFromJson para manejar valores null correctamente
+            String descripcion = getStringFromJson(espJson, "descripcion");
+            esp.setDescripcion(descripcion != null ? descripcion : "");
+
             esp.setIncluyeMateriales(espJson.has("incluyeMateriales") && espJson.get("incluyeMateriales").getAsBoolean());
             esp.setCosto(espJson.get("costo").getAsDouble());
             esp.setTipoCosto(espJson.get("tipoCosto").getAsString());
@@ -457,10 +467,10 @@ public class ServiciosProfesionalServlet extends HttpServlet {
                 JsonObject ubicJson = ubicacionesJson.get(i).getAsJsonObject();
 
                 UbicacionServicio ubicacion = new UbicacionServicio();
-                ubicacion.setTipoUbicacion(ubicJson.get("tipoUbicacion").getAsString());
-                ubicacion.setDepartamento(ubicJson.has("departamento") ? ubicJson.get("departamento").getAsString() : null);
-                ubicacion.setProvincia(ubicJson.has("provincia") ? ubicJson.get("provincia").getAsString() : null);
-                ubicacion.setDistrito(ubicJson.has("distrito") ? ubicJson.get("distrito").getAsString() : null);
+                ubicacion.setTipoUbicacion(getStringFromJson(ubicJson, "tipoUbicacion"));
+                ubicacion.setDepartamento(getStringFromJson(ubicJson, "departamento"));
+                ubicacion.setProvincia(getStringFromJson(ubicJson, "provincia"));
+                ubicacion.setDistrito(getStringFromJson(ubicJson, "distrito"));
                 ubicacion.setOrden(i + 1);
 
                 if (!ubicacion.isValid()) {
@@ -526,6 +536,21 @@ public class ServiciosProfesionalServlet extends HttpServlet {
         }
 
         return disponibilidad;
+    }
+
+    /**
+     * Obtiene un valor String de un JsonObject de forma segura,
+     * manejando correctamente valores null de JSON.
+     *
+     * @param jsonObject El objeto JSON
+     * @param key La clave a buscar
+     * @return El valor como String, o null si no existe o es JsonNull
+     */
+    private String getStringFromJson(JsonObject jsonObject, String key) {
+        if (jsonObject.has(key) && !jsonObject.get(key).isJsonNull()) {
+            return jsonObject.get(key).getAsString();
+        }
+        return null;
     }
 
     private void configurarCORS(HttpServletResponse response) {

@@ -73,12 +73,14 @@ class CategoriaAPI {
             selectElement.innerHTML = `<option value="">${defaultOption}</option>`;
 
             // Agregar opciones
+            // ✅ ACTUALIZACIÓN: Solo mostrar nombre, sin icono
             categorias.forEach(cat => {
                 const option = document.createElement('option');
                 option.value = cat.id;
-                option.textContent = `${cat.icono || '🔧'} ${cat.nombre}`;
+                option.textContent = cat.nombre;
                 option.dataset.descripcion = cat.descripcion || '';
                 option.dataset.activa = cat.activa;
+                option.dataset.icono = cat.icono || '🔧'; // Guardado en dataset por si se necesita
                 selectElement.appendChild(option);
             });
 

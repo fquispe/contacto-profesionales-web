@@ -231,24 +231,25 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
     private boolean guardarEspecialidadesInterno(Connection conn, Integer profesionalId,
             List<EspecialidadProfesional> especialidades) throws SQLException {
 
-		// ✅ SQL CORREGIDO: Usa categoria_id en lugar de nombre_especialidad
+		// ✅ SQL ACTUALIZADO: Añadido campo servicio_profesional (obligatorio)
 		String sql = "INSERT INTO especialidades_profesional " +
-		"(profesional_id, categoria_id, descripcion, incluye_materiales, " +
+		"(profesional_id, categoria_id, servicio_profesional, descripcion, incluye_materiales, " +
 		"costo, tipo_costo, es_principal, orden, fecha_creacion, fecha_actualizacion, activo) " +
-		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), true)";
-		
+		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), true)";
+
 		try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 			for (EspecialidadProfesional esp : especialidades) {
 				esp.setProfesionalId(profesionalId);
-				
+
 				stmt.setInt(1, profesionalId);
-				stmt.setInt(2, esp.getCategoriaId());          // ✅ Cambio aquí
-				stmt.setString(3, esp.getDescripcion());
-				stmt.setBoolean(4, esp.getIncluyeMateriales());
-				stmt.setDouble(5, esp.getCosto());
-				stmt.setString(6, esp.getTipoCosto());
-				stmt.setBoolean(7, esp.getEsPrincipal());
-				stmt.setInt(8, esp.getOrden());
+				stmt.setInt(2, esp.getCategoriaId());
+				stmt.setString(3, esp.getServicioProfesional());  // ✅ NUEVO campo obligatorio
+				stmt.setString(4, esp.getDescripcion());
+				stmt.setBoolean(5, esp.getIncluyeMateriales());
+				stmt.setDouble(6, esp.getCosto());
+				stmt.setString(7, esp.getTipoCosto());
+				stmt.setBoolean(8, esp.getEsPrincipal());
+				stmt.setInt(9, esp.getOrden());
 				
 				stmt.executeUpdate();
 				
@@ -264,7 +265,8 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
 
     @Override
     public List<EspecialidadProfesional> obtenerEspecialidadesPorProfesional(Integer profesionalId) throws Exception {
-    	String sql = "SELECT e.id, e.profesional_id, e.categoria_id, e.descripcion, " +
+    	// ✅ SQL ACTUALIZADO: Añadido campo servicio_profesional en el SELECT
+    	String sql = "SELECT e.id, e.profesional_id, e.categoria_id, e.servicio_profesional, e.descripcion, " +
                 "e.incluye_materiales, e.costo, e.tipo_costo, e.es_principal, e.orden, " +
                 "e.fecha_creacion, e.fecha_actualizacion, e.activo, " +
                 "c.nombre AS categoria_nombre, c.descripcion AS categoria_descripcion, " +
@@ -301,12 +303,14 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
         }
     }
 
+    // ✅ ACTUALIZACIÓN: DELETE físico para evitar conflictos con restricciones de unicidad
     private boolean eliminarEspecialidadesPorProfesionalInterno(Connection conn, Integer profesionalId) throws SQLException {
-        String sql = "UPDATE especialidades_profesional SET activo = FALSE WHERE profesional_id = ?";
+        String sql = "DELETE FROM especialidades_profesional WHERE profesional_id = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, profesionalId);
-            stmt.executeUpdate();
+            int rowsDeleted = stmt.executeUpdate();
+            logger.debug("Eliminadas {} especialidades del profesional {}", rowsDeleted, profesionalId);
             return true;
         }
     }
@@ -317,7 +321,8 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
         // Campos de la tabla especialidades_profesional
         esp.setId(rs.getInt("id"));
         esp.setProfesionalId(rs.getInt("profesional_id"));
-        esp.setCategoriaId(rs.getInt("categoria_id"));  // ✅ CAMBIO AQUÍ
+        esp.setCategoriaId(rs.getInt("categoria_id"));
+        esp.setServicioProfesional(rs.getString("servicio_profesional"));  // ✅ NUEVO campo obligatorio
         esp.setDescripcion(rs.getString("descripcion"));
         esp.setIncluyeMateriales(rs.getBoolean("incluye_materiales"));
         esp.setCosto(rs.getDouble("costo"));
@@ -466,9 +471,10 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
         }
     }
 
+    // ✅ ACTUALIZACIÓN: DELETE físico para evitar conflictos con restricciones de unicidad
     private boolean eliminarAreaServicioPorProfesionalInterno(Connection conn, Integer profesionalId) throws SQLException {
         // Primero, obtener el ID del área de servicio
-        String sqlGetId = "SELECT id FROM areas_servicio WHERE profesional_id = ? AND activo = TRUE";
+        String sqlGetId = "SELECT id FROM areas_servicio WHERE profesional_id = ?";
         Integer areaServicioId = null;
 
         try (PreparedStatement stmt = conn.prepareStatement(sqlGetId)) {
@@ -480,18 +486,20 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
         }
 
         if (areaServicioId != null) {
-            // Desactivar ubicaciones
-            String sqlUbicaciones = "UPDATE ubicaciones_servicio SET activo = FALSE WHERE area_servicio_id = ?";
+            // Eliminar ubicaciones físicamente
+            String sqlUbicaciones = "DELETE FROM ubicaciones_servicio WHERE area_servicio_id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(sqlUbicaciones)) {
                 stmt.setInt(1, areaServicioId);
-                stmt.executeUpdate();
+                int rowsDeleted = stmt.executeUpdate();
+                logger.debug("Eliminadas {} ubicaciones del área de servicio {}", rowsDeleted, areaServicioId);
             }
 
-            // Desactivar área de servicio
-            String sqlArea = "UPDATE areas_servicio SET activo = FALSE WHERE id = ?";
+            // Eliminar área de servicio físicamente
+            String sqlArea = "DELETE FROM areas_servicio WHERE id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(sqlArea)) {
                 stmt.setInt(1, areaServicioId);
                 stmt.executeUpdate();
+                logger.debug("Eliminada área de servicio {} del profesional {}", areaServicioId, profesionalId);
             }
         }
 
@@ -654,9 +662,10 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
         }
     }
 
+    // ✅ ACTUALIZACIÓN: DELETE físico para evitar conflictos con restricciones de unicidad
     private boolean eliminarDisponibilidadPorProfesionalInterno(Connection conn, Integer profesionalId) throws SQLException {
         // Obtener ID de disponibilidad
-        String sqlGetId = "SELECT id FROM disponibilidad_horaria WHERE profesional_id = ? AND activo = TRUE";
+        String sqlGetId = "SELECT id FROM disponibilidad_horaria WHERE profesional_id = ?";
         Integer disponibilidadId = null;
 
         try (PreparedStatement stmt = conn.prepareStatement(sqlGetId)) {
@@ -668,18 +677,20 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
         }
 
         if (disponibilidadId != null) {
-            // Desactivar horarios
-            String sqlHorarios = "UPDATE horarios_dia SET activo = FALSE WHERE disponibilidad_id = ?";
+            // Eliminar horarios físicamente
+            String sqlHorarios = "DELETE FROM horarios_dia WHERE disponibilidad_id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(sqlHorarios)) {
                 stmt.setInt(1, disponibilidadId);
-                stmt.executeUpdate();
+                int rowsDeleted = stmt.executeUpdate();
+                logger.debug("Eliminados {} horarios de la disponibilidad {}", rowsDeleted, disponibilidadId);
             }
 
-            // Desactivar disponibilidad
-            String sqlDisp = "UPDATE disponibilidad_horaria SET activo = FALSE WHERE id = ?";
+            // Eliminar disponibilidad físicamente
+            String sqlDisp = "DELETE FROM disponibilidad_horaria WHERE id = ?";
             try (PreparedStatement stmt = conn.prepareStatement(sqlDisp)) {
                 stmt.setInt(1, disponibilidadId);
                 stmt.executeUpdate();
+                logger.debug("Eliminada disponibilidad {} del profesional {}", disponibilidadId, profesionalId);
             }
         }
 

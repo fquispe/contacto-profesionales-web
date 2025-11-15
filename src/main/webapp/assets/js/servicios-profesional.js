@@ -232,9 +232,62 @@ async function cargarDatosExistentes() {
                 document.getElementById('todoPaisCheckbox').checked = appState.todoPais;
 
                 if (!appState.todoPais && servicios.areaServicio.ubicaciones) {
-                    servicios.areaServicio.ubicaciones.forEach(ub => {
-                        agregarUbicacion(ub);
-                    });
+                    // Agregar cada ubicación y cargar sus dependencias
+                    for (const ub of servicios.areaServicio.ubicaciones) {
+                        // ✅ Buscar los IDs basándose en los nombres que vienen del backend
+                        const ubicacionConIds = { ...ub };
+
+                        // Buscar departamentoId
+                        if (ub.departamento) {
+                            const dept = appState.departamentos.find(d =>
+                                d.nombre.toLowerCase() === ub.departamento.toLowerCase()
+                            );
+                            if (dept) {
+                                ubicacionConIds.departamentoId = dept.id;
+                            }
+                        }
+
+                        agregarUbicacion(ubicacionConIds);
+
+                        // Cargar provincias y distritos para ubicaciones existentes
+                        const index = appState.ubicaciones.length - 1;
+                        const ubicacion = appState.ubicaciones[index];
+
+                        if (ubicacion.departamentoId) {
+                            // Cargar provincias si el tipo lo requiere
+                            if (ubicacion.tipoUbicacion !== 'departamento') {
+                                ubicacion.provinciasDisponibles = await cargarProvincias(ubicacion.departamentoId);
+
+                                // Buscar provinciaId
+                                if (ub.provincia && ubicacion.provinciasDisponibles.length > 0) {
+                                    const prov = ubicacion.provinciasDisponibles.find(p =>
+                                        p.nombre.toLowerCase() === ub.provincia.toLowerCase()
+                                    );
+                                    if (prov) {
+                                        ubicacion.provinciaId = prov.id;
+                                    }
+                                }
+                            }
+
+                            // Cargar distritos si el tipo lo requiere y tiene provincia
+                            if (ubicacion.tipoUbicacion === 'distrito' && ubicacion.provinciaId) {
+                                ubicacion.distritosDisponibles = await cargarDistritos(ubicacion.provinciaId);
+
+                                // Buscar distritoId
+                                if (ub.distrito && ubicacion.distritosDisponibles.length > 0) {
+                                    const dist = ubicacion.distritosDisponibles.find(d =>
+                                        d.nombre.toLowerCase() === ub.distrito.toLowerCase()
+                                    );
+                                    if (dist) {
+                                        ubicacion.distritoId = dist.id;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Re-renderizar las ubicaciones con los dropdowns actualizados
+                    renderizarUbicaciones();
                 }
 
                 toggleTodoPais();
@@ -283,6 +336,7 @@ function agregarEspecialidad(datosExistentes = null) {
         orden: index + 1,
         categoriaId: datosExistentes?.categoriaId || (appState.categorias.length > 0 ? appState.categorias[0].id : null),
         categoriaNombre: datosExistentes?.categoriaNombre || (appState.categorias.length > 0 ? appState.categorias[0].nombre : ''),
+        servicioProfesional: datosExistentes?.servicioProfesional || '', // ✅ NUEVO campo obligatorio
         descripcion: datosExistentes?.descripcion || '',
         incluyeMateriales: datosExistentes?.incluyeMateriales || false,
         costo: datosExistentes?.costo || '',
@@ -352,12 +406,25 @@ function renderizarEspecialidades() {
                 <select class="form-select"
                         onchange="actualizarCategoriaEspecialidad(${index}, this.value)"
                         required>
-                    ${appState.categorias.map(cat => 
+                    ${appState.categorias.map(cat =>
                         `<option value="${cat.id}" ${esp.categoriaId === cat.id ? 'selected' : ''}>
-                            ${cat.icono || '📋'} ${cat.nombre}
+                            ${cat.nombre}
                         </option>`
                     ).join('')}
                 </select>
+            </div>
+
+            <div class="form-group">
+                <label class="required">Servicio Profesional</label>
+                <input type="text" class="form-input"
+                       value="${esp.servicioProfesional || ''}"
+                       onchange="actualizarEspecialidad(${index}, 'servicioProfesional', this.value)"
+                       placeholder="Ej: Instalación eléctrica residencial, Mantenimiento de aires acondicionados..."
+                       maxlength="255"
+                       required>
+                <small style="color: var(--medium-gray); font-size: 13px;">
+                    Escriba el nombre específico del servicio que brindará
+                </small>
             </div>
 
             <div class="form-group">
@@ -819,6 +886,7 @@ async function enviarFormulario(event) {
         usuarioId: appState.usuarioId,
         especialidades: appState.especialidades.map(esp => ({
             categoriaId: esp.categoriaId,
+            servicioProfesional: esp.servicioProfesional, // ✅ NUEVO campo obligatorio
             descripcion: esp.descripcion || '',
             incluyeMateriales: esp.incluyeMateriales || false,
             costo: parseFloat(esp.costo),
@@ -842,12 +910,14 @@ async function enviarFormulario(event) {
     };
 
     console.log('Enviando datos:', datosServicio);
+    console.log('Modo edición:', appState.modoEdicion);
 
     mostrarLoading(true);
 
     try {
         const url = './api/servicios-profesional';
-        const method = 'POST';
+        // ✅ Usar PUT cuando estamos editando, POST cuando es nuevo
+        const method = appState.modoEdicion ? 'PUT' : 'POST';
 
         const response = await fetch(url, {
             method: method,
@@ -860,7 +930,10 @@ async function enviarFormulario(event) {
         const data = await response.json();
 
         if (data.success) {
-            mostrarAlerta('success', data.message || 'Servicios guardados exitosamente');
+            const mensajeExito = appState.modoEdicion
+                ? 'Servicios actualizados exitosamente'
+                : 'Servicios creados exitosamente';
+            mostrarAlerta('success', data.message || mensajeExito);
 
             setTimeout(() => {
                 window.location.href = 'dashboard.html';
@@ -898,6 +971,12 @@ function validarFormulario() {
 
         if (!esp.categoriaId) {
             mostrarAlerta('error', `La especialidad ${i + 1} debe tener una categoría seleccionada`);
+            return false;
+        }
+
+        // ✅ NUEVA VALIDACIÓN: servicioProfesional es obligatorio
+        if (!esp.servicioProfesional || esp.servicioProfesional.trim() === '') {
+            mostrarAlerta('error', `La especialidad ${i + 1} debe tener un servicio profesional especificado`);
             return false;
         }
 

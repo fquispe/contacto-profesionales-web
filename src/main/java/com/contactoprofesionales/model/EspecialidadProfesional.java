@@ -13,6 +13,7 @@ public class EspecialidadProfesional {
     private Integer id;
     private Integer profesionalId;
     private Integer categoriaId;
+    private String servicioProfesional; // ✅ NUEVO - Nombre del servicio específico que brinda
     private String descripcion;
     private Boolean incluyeMateriales;
     private Double costo;
@@ -76,6 +77,15 @@ public class EspecialidadProfesional {
 
     public void setCategoriaId(Integer categoriaId) {
         this.categoriaId = categoriaId;
+    }
+
+    // ✅ NUEVO - Getter y Setter para servicioProfesional
+    public String getServicioProfesional() {
+        return servicioProfesional;
+    }
+
+    public void setServicioProfesional(String servicioProfesional) {
+        this.servicioProfesional = servicioProfesional;
     }
 
     public String getDescripcion() {
@@ -184,8 +194,10 @@ public class EspecialidadProfesional {
     }
 
     // Métodos de validación
+    // ✅ ACTUALIZADO - Agregada validación para servicioProfesional (obligatorio)
     public boolean isValid() {
         return categoriaId != null && categoriaId > 0
+            && servicioProfesional != null && !servicioProfesional.trim().isEmpty()
             && costo != null && costo > 0
             && tipoCosto != null && (tipoCosto.equals("hora") || tipoCosto.equals("dia") || tipoCosto.equals("mes"))
             && orden != null && orden >= 1 && orden <= 3;
@@ -198,6 +210,7 @@ public class EspecialidadProfesional {
                 ", profesionalId=" + profesionalId +
                 ", categoriaId=" + categoriaId +
                 ", categoriaNombre='" + categoriaNombre + '\'' +
+                ", servicioProfesional='" + servicioProfesional + '\'' +
                 ", costo=" + costo +
                 ", tipoCosto='" + tipoCosto + '\'' +
                 ", esPrincipal=" + esPrincipal +
