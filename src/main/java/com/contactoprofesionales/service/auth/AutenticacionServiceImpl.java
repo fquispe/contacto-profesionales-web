@@ -8,6 +8,7 @@ import com.contactoprofesionales.dto.RegistroCompletoResponse;
 import com.contactoprofesionales.util.PasswordHasher;
 import com.contactoprofesionales.util.DatabaseConnection;
 import com.contactoprofesionales.exception.AuthenticationException;
+import com.contactoprofesionales.exception.UserNotFoundException; // ✅ NUEVO: Excepción para usuario no encontrado (añadido: 2025-11-15)
 import com.contactoprofesionales.exception.DatabaseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,39 +45,43 @@ public class AutenticacionServiceImpl implements AutenticacionService {
         this.passwordHasher = new PasswordHasher();
     }
 
+    // ✅ ACTUALIZADO: Diferencia entre usuario no existe vs contraseña incorrecta (actualizado: 2025-11-15)
     @Override
-    public Usuario autenticar(String email, String password) 
+    public Usuario autenticar(String email, String password)
             throws AuthenticationException, DatabaseException {
-        
+
         logger.info("Intento de autenticación para: {}", email);
-        
+
         // Validar entrada
         validarCredenciales(email, password);
-        
+
         // Buscar usuario
         Usuario usuario = usuarioDAO.buscarPorEmail(email);
-        
+
+        // ✅ CAMBIO IMPORTANTE: Lanzar UserNotFoundException cuando el usuario no existe
+        // Esto permite NO contar intentos fallidos en el frontend
         if (usuario == null) {
             logger.warn("✗ Usuario no encontrado: {}", email);
-            throw new AuthenticationException("Credenciales inválidas");
+            throw new UserNotFoundException("Usuario no encontrado. Por favor regístrese");
         }
-        
+
         if (!usuario.getActivo()) {
             logger.warn("✗ Usuario inactivo: {}", email);
             throw new AuthenticationException("Usuario inactivo. Contacte al administrador");
         }
-        
-        // Verificar contraseña
+
+        // ✅ CAMBIO IMPORTANTE: Para contraseña incorrecta, lanzar AuthenticationException
+        // Esto SÍ contará intentos fallidos en el frontend
         if (!passwordHasher.verify(password, usuario.getPasswordHash())) {
             logger.warn("✗ Contraseña incorrecta para: {}", email);
-            throw new AuthenticationException("Credenciales inválidas");
+            throw new AuthenticationException("Contraseña incorrecta");
         }
-        
+
         logger.info("✓ Usuario autenticado exitosamente: {}", email);
-        
+
         // Actualizar último acceso
         actualizarUltimoAcceso(usuario);
-        
+
         return usuario;
     }
 

@@ -426,6 +426,15 @@ public class ServiciosProfesionalServlet extends HttpServlet {
             esp.setEsPrincipal(espJson.has("esPrincipal") && espJson.get("esPrincipal").getAsBoolean());
             esp.setOrden(i + 1);
 
+            // ✅ NUEVOS CAMPOS - Tipo de prestación de trabajo (añadido: 2025-11-14)
+            // Extraer trabajoRemoto del JSON (por defecto false si no está presente)
+            boolean trabajoRemoto = espJson.has("trabajoRemoto") && espJson.get("trabajoRemoto").getAsBoolean();
+            esp.setTrabajoRemoto(trabajoRemoto);
+
+            // Extraer trabajoPresencial del JSON (por defecto false si no está presente)
+            boolean trabajoPresencial = espJson.has("trabajoPresencial") && espJson.get("trabajoPresencial").getAsBoolean();
+            esp.setTrabajoPresencial(trabajoPresencial);
+
             if (!esp.isValid()) {
                 throw new IllegalArgumentException("Especialidad " + (i + 1) + " tiene datos inválidos");
             }

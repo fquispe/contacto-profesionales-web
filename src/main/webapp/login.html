@@ -749,6 +749,7 @@
                 this.baseURL = '/ContactoProfesionalesWeb/api';
             }
 
+            // ✅ ACTUALIZADO: Manejo diferenciado de errores (actualizado: 2025-11-15)
             async login(email, password) {
                 try {
                     const response = await fetch(`${this.baseURL}/login`, {
@@ -767,15 +768,36 @@
                         localStorage.setItem('userData', JSON.stringify(data.data.usuario));
                         localStorage.setItem('tokenExpiration', Date.now() + data.data.expiresIn);
                         localStorage.setItem('isAuthenticated', 'true');
-                        
+
                         return { success: true, data: data.data };
                     } else {
-                        return { success: false, message: data.error || 'Error desconocido' };
+                        // ✅ NUEVO: Determinar tipo de error basado en código HTTP y flags (añadido: 2025-11-15)
+                        const errorType = this.determineErrorType(response.status, data);
+                        return {
+                            success: false,
+                            message: data.error || 'Error desconocido',
+                            errorType: errorType, // 'userNotFound' o 'passwordIncorrect'
+                            errorData: data.data || {}
+                        };
                     }
                 } catch (error) {
                     console.error('Error en login:', error);
                     return { success: false, message: 'Error de conexión con el servidor' };
                 }
+            }
+
+            // ✅ NUEVO: Determina el tipo de error para manejar intentos (añadido: 2025-11-15)
+            determineErrorType(statusCode, data) {
+                // Si es 404, es usuario no encontrado - NO contar intentos
+                if (statusCode === 404 || (data.data && data.data.userNotFound)) {
+                    return 'userNotFound';
+                }
+                // Si es 401 y tiene flag de contraseña incorrecta - SÍ contar intentos
+                if (statusCode === 401 || (data.data && data.data.passwordIncorrect)) {
+                    return 'passwordIncorrect';
+                }
+                // Default
+                return 'unknown';
             }
 
             logout() {
@@ -898,9 +920,10 @@
             }
         }
 
+        // ✅ ACTUALIZADO: Diferencia entre usuario no existe y contraseña incorrecta (actualizado: 2025-11-15)
         async function handleLogin(e) {
             e.preventDefault();
-            
+
             if (isBlocked) {
                 showAlert('🚫 Cuenta bloqueada. Espera antes de intentar nuevamente.', 'error');
                 return;
@@ -921,11 +944,12 @@
 
             try {
                 const result = await authService.login(email, password);
-                
+
                 if (result.success) {
                     handleLoginSuccess(result.data, rememberMe);
                 } else {
-                    handleLoginError(result.message);
+                    // ✅ NUEVO: Pasar tipo de error al manejador (añadido: 2025-11-15)
+                    handleLoginError(result.message, result.errorType, result.errorData);
                 }
             } catch (error) {
                 console.error('Error en login:', error);
@@ -951,18 +975,41 @@
             }, 1500);
         }
 
-        function handleLoginError(message) {
+        // ✅ ACTUALIZADO: NO contar intentos cuando el usuario no existe (actualizado: 2025-11-15)
+        function handleLoginError(message, errorType, errorData) {
+            // ✅ IMPORTANTE: Si el usuario no existe, NO contar intentos y sugerir registro
+            if (errorType === 'userNotFound') {
+                // No incrementar intentos
+                showAlert(`❌ ${message}`, 'warning');
+
+                // Agregar botón para ir a registro
+                setTimeout(() => {
+                    const alertDiv = document.querySelector('.alert-warning');
+                    if (alertDiv) {
+                        const registerLink = document.createElement('a');
+                        registerLink.href = 'register.html';
+                        registerLink.textContent = ' ¿Desea crear una cuenta?';
+                        registerLink.style.cssText = 'color: var(--primary-color); font-weight: 600; text-decoration: underline; margin-left: 5px;';
+                        alertDiv.appendChild(registerLink);
+                    }
+                }, 100);
+
+                // No actualizar contador
+                return;
+            }
+
+            // ✅ Solo contar intentos cuando es contraseña incorrecta (passwordIncorrect)
             loginAttempts++;
             localStorage.setItem('loginAttempts', loginAttempts);
-            
+
             if (loginAttempts >= maxAttempts) {
                 blockEndTime = Date.now() + blockDuration;
                 localStorage.setItem('blockEndTime', blockEndTime);
                 isBlocked = true;
-                
+
                 disableForm();
                 showAlert('🚫 Demasiados intentos fallidos. Cuenta bloqueada por 15 minutos.', 'error');
-                
+
                 setTimeout(() => {
                     isBlocked = false;
                     loginAttempts = 0;
@@ -975,7 +1022,7 @@
                 const remainingAttempts = maxAttempts - loginAttempts;
                 showAlert(`❌ ${message}. Te quedan ${remainingAttempts} intentos.`, 'error');
             }
-            
+
             updateAttemptCounter();
         }
 

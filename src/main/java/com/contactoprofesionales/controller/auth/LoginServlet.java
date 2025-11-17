@@ -10,6 +10,7 @@ import com.contactoprofesionales.service.auth.TokenService;
 import com.contactoprofesionales.service.auth.TokenServiceImpl;
 import com.contactoprofesionales.util.JsonResponse;
 import com.contactoprofesionales.exception.AuthenticationException;
+import com.contactoprofesionales.exception.UserNotFoundException; // ✅ NUEVO: Para diferenciar usuario no encontrado (añadido: 2025-11-15)
 import com.contactoprofesionales.exception.DatabaseException;
 import com.contactoprofesionales.dao.usuariopersona.UsuarioPersonaDAO;
 import com.contactoprofesionales.dao.usuariopersona.UsuarioPersonaDAOImpl;
@@ -146,16 +147,23 @@ public class LoginServlet extends HttpServlet {
             // 7. Retornar respuesta
             response.setStatus(HttpServletResponse.SC_OK);
             response.getWriter().write(gson.toJson(jsonResponse));
-            
+
+        // ✅ NUEVO: Capturar UserNotFoundException PRIMERO (antes que AuthenticationException) (añadido: 2025-11-15)
+        // Cuando el usuario no existe, NO se deben contar intentos fallidos
+        } catch (UserNotFoundException e) {
+            handleUserNotFoundError(response, e, startTime);
+
+        // ✅ ACTUALIZADO: AuthenticationException ahora es solo para contraseñas incorrectas (actualizado: 2025-11-15)
+        // Cuando la contraseña es incorrecta, SÍ se deben contar intentos fallidos
         } catch (AuthenticationException e) {
             handleAuthenticationError(response, e, startTime);
-            
+
         } catch (DatabaseException e) {
             handleDatabaseError(response, e, startTime);
-            
+
         } catch (JsonSyntaxException e) {
             handleJsonError(response, e, startTime);
-            
+
         } catch (Exception e) {
             handleInternalError(response, e, startTime);
         }
@@ -244,16 +252,49 @@ public class LoginServlet extends HttpServlet {
     }
 
     /**
-     * Maneja errores de autenticación (401).
+     * ✅ NUEVO: Maneja error cuando el usuario no existe (actualizado: 2025-11-15)
+     * NO cuenta como intento fallido - sugiere registrarse
+     * Retorna código especial 404 para que el frontend NO cuente intentos
      */
-    private void handleAuthenticationError(HttpServletResponse response, 
-                                          AuthenticationException e, 
+    private void handleUserNotFoundError(HttpServletResponse response,
+                                        UserNotFoundException e,
+                                        long startTime) throws IOException {
+        long duration = System.currentTimeMillis() - startTime;
+        logger.warn("✗ Usuario no encontrado - Tiempo: {}ms", duration);
+
+        // Crear respuesta personalizada con flag especial
+        Map<String, Object> errorData = new HashMap<>();
+        errorData.put("userNotFound", true); // ✅ Flag para que el frontend NO cuente intentos
+        errorData.put("suggestRegister", true);
+
+        // ✅ CORREGIDO: Usar método factory estático (corregido: 2025-11-15)
+        JsonResponse jsonResponse = JsonResponse.error(e.getMessage());
+        jsonResponse.setData(errorData);
+
+        // Usar código 404 para diferenciar de errores de autenticación normales
+        response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+        response.getWriter().write(gson.toJson(jsonResponse));
+    }
+
+    /**
+     * ✅ ACTUALIZADO: Maneja errores de autenticación - solo para contraseñas incorrectas (actualizado: 2025-11-15)
+     * SÍ cuenta como intento fallido
+     */
+    private void handleAuthenticationError(HttpServletResponse response,
+                                          AuthenticationException e,
                                           long startTime) throws IOException {
         long duration = System.currentTimeMillis() - startTime;
-        logger.warn("✗ Error de autenticación: {} - Tiempo: {}ms", e.getMessage(), duration);
-        
+        logger.warn("✗ Error de autenticación (contraseña incorrecta) - Tiempo: {}ms", duration);
+
+        // Crear respuesta con flag para contar intentos
+        Map<String, Object> errorData = new HashMap<>();
+        errorData.put("passwordIncorrect", true); // ✅ Flag para que el frontend SÍ cuente intentos
+        errorData.put("countAttempt", true);
+
+        // ✅ CORREGIDO: Usar método factory estático (corregido: 2025-11-15)
         JsonResponse jsonResponse = JsonResponse.error(e.getMessage());
-        
+        jsonResponse.setData(errorData);
+
         response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
         response.getWriter().write(gson.toJson(jsonResponse));
     }

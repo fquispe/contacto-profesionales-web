@@ -20,6 +20,9 @@ public class EspecialidadProfesional {
     private String tipoCosto; // 'hora', 'dia', 'mes'
     private Boolean esPrincipal;
     private Integer orden; // 1, 2, o 3
+    // ✅ NUEVOS CAMPOS - Tipo de prestación de trabajo (añadido: 2025-11-14)
+    private Boolean trabajoRemoto;     // Indica si ofrece servicio de forma remota
+    private Boolean trabajoPresencial; // Indica si ofrece servicio de forma presencial
     private LocalDateTime fechaCreacion;
     private LocalDateTime fechaActualizacion;
     private Boolean activo;
@@ -37,6 +40,9 @@ public class EspecialidadProfesional {
         this.activo = true;
         this.esPrincipal = false;
         this.incluyeMateriales = false;
+        // ✅ Valores por defecto para tipo de prestación (añadido: 2025-11-14)
+        this.trabajoRemoto = false;
+        this.trabajoPresencial = false;
     }
 
     public EspecialidadProfesional(Integer profesionalId, Integer categoriaId,
@@ -160,6 +166,39 @@ public class EspecialidadProfesional {
         this.activo = activo;
     }
 
+    // ✅ Getters y Setters - Tipo de prestación de trabajo (añadido: 2025-11-14)
+    /**
+     * Indica si el profesional ofrece este servicio de forma remota
+     * @return true si ofrece trabajo remoto, false en caso contrario
+     */
+    public Boolean getTrabajoRemoto() {
+        return trabajoRemoto;
+    }
+
+    /**
+     * Establece si el profesional ofrece este servicio de forma remota
+     * @param trabajoRemoto true para habilitar trabajo remoto
+     */
+    public void setTrabajoRemoto(Boolean trabajoRemoto) {
+        this.trabajoRemoto = trabajoRemoto;
+    }
+
+    /**
+     * Indica si el profesional ofrece este servicio de forma presencial
+     * @return true si ofrece trabajo presencial, false en caso contrario
+     */
+    public Boolean getTrabajoPresencial() {
+        return trabajoPresencial;
+    }
+
+    /**
+     * Establece si el profesional ofrece este servicio de forma presencial
+     * @param trabajoPresencial true para habilitar trabajo presencial
+     */
+    public void setTrabajoPresencial(Boolean trabajoPresencial) {
+        this.trabajoPresencial = trabajoPresencial;
+    }
+
     // Getters y Setters - Campos transientes (de categoría)
     public String getCategoriaNombre() {
         return categoriaNombre;
@@ -194,13 +233,20 @@ public class EspecialidadProfesional {
     }
 
     // Métodos de validación
-    // ✅ ACTUALIZADO - Agregada validación para servicioProfesional (obligatorio)
+    // ✅ ACTUALIZADO - Agregada validación para servicioProfesional y tipo de prestación (actualizado: 2025-11-14)
     public boolean isValid() {
-        return categoriaId != null && categoriaId > 0
+        // Validaciones existentes
+        boolean validacionBasica = categoriaId != null && categoriaId > 0
             && servicioProfesional != null && !servicioProfesional.trim().isEmpty()
             && costo != null && costo > 0
             && tipoCosto != null && (tipoCosto.equals("hora") || tipoCosto.equals("dia") || tipoCosto.equals("mes"))
             && orden != null && orden >= 1 && orden <= 3;
+
+        // ✅ NUEVA VALIDACIÓN - Al menos una modalidad de trabajo debe estar seleccionada
+        boolean tieneModalidadTrabajo = (trabajoRemoto != null && trabajoRemoto) ||
+                                       (trabajoPresencial != null && trabajoPresencial);
+
+        return validacionBasica && tieneModalidadTrabajo;
     }
 
     @Override
@@ -215,6 +261,8 @@ public class EspecialidadProfesional {
                 ", tipoCosto='" + tipoCosto + '\'' +
                 ", esPrincipal=" + esPrincipal +
                 ", orden=" + orden +
+                ", trabajoRemoto=" + trabajoRemoto +           // ✅ AÑADIDO: 2025-11-14
+                ", trabajoPresencial=" + trabajoPresencial +   // ✅ AÑADIDO: 2025-11-14
                 '}';
     }
 }

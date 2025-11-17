@@ -24,7 +24,7 @@ public class HorarioDia {
     public HorarioDia(Integer disponibilidadId, String diaSemana, String tipoJornada) {
         this();
         this.disponibilidadId = disponibilidadId;
-        this.diaSemana = diaSemana;
+        this.diaSemana = diaSemana != null ? diaSemana.toLowerCase() : null;
         this.tipoJornada = tipoJornada;
 
         // Si es 8hrs, establecer horario por defecto
@@ -38,7 +38,7 @@ public class HorarioDia {
                      LocalTime horaInicio, LocalTime horaFin) {
         this();
         this.disponibilidadId = disponibilidadId;
-        this.diaSemana = diaSemana;
+        this.diaSemana = diaSemana != null ? diaSemana.toLowerCase() : null;
         this.tipoJornada = tipoJornada;
         this.horaInicio = horaInicio;
         this.horaFin = horaFin;
@@ -66,7 +66,7 @@ public class HorarioDia {
     }
 
     public void setDiaSemana(String diaSemana) {
-        this.diaSemana = diaSemana;
+        this.diaSemana = diaSemana != null ? diaSemana.toLowerCase() : null;
     }
 
     public String getTipoJornada() {

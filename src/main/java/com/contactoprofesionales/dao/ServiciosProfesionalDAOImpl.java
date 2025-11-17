@@ -80,6 +80,7 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
         }
     }
 
+    // ✅ ACTUALIZADO: Lógica de actualización dinámica con soft delete (actualizado: 2025-11-15)
     @Override
     public boolean actualizarServiciosProfesional(Integer profesionalId,
                                                  List<EspecialidadProfesional> especialidades,
@@ -91,15 +92,23 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
             conn = DatabaseConnection.getConnection();
             conn.setAutoCommit(false);
 
-            // Eliminar datos existentes
-            eliminarEspecialidadesPorProfesionalInterno(conn, profesionalId);
+            // ✅ CAMBIO IMPORTANTE: Actualización inteligente de especialidades con soft delete
+            // En lugar de eliminar todo y reinsertar, ahora:
+            // 1. Marca como inactivas las que ya no vienen en la lista
+            // 2. Actualiza las existentes que vienen con ID
+            // 3. Inserta las nuevas que no tienen ID
+            if (especialidades != null && !especialidades.isEmpty()) {
+                actualizarEspecialidadesInterno(conn, profesionalId, especialidades);
+            } else {
+                // Si no vienen especialidades, marcar todas como inactivas
+                desactivarTodasEspecialidadesInterno(conn, profesionalId);
+            }
+
+            // Para área de servicio y disponibilidad, mantener lógica de reemplazo total
+            // (ya que no tienen el concepto de múltiples registros como especialidades)
             eliminarAreaServicioPorProfesionalInterno(conn, profesionalId);
             eliminarDisponibilidadPorProfesionalInterno(conn, profesionalId);
 
-            // Guardar nuevos datos
-            if (especialidades != null && !especialidades.isEmpty()) {
-                guardarEspecialidadesInterno(conn, profesionalId, especialidades);
-            }
             if (areaServicio != null) {
                 areaServicio.setProfesionalId(profesionalId);
                 guardarAreaServicioInterno(conn, areaServicio);
@@ -117,6 +126,7 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
             if (conn != null) {
                 try {
                     conn.rollback();
+                    logger.error("Rollback realizado para profesional {}", profesionalId);
                 } catch (SQLException ex) {
                     logger.error("Error en rollback", ex);
                 }
@@ -231,11 +241,12 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
     private boolean guardarEspecialidadesInterno(Connection conn, Integer profesionalId,
             List<EspecialidadProfesional> especialidades) throws SQLException {
 
-		// ✅ SQL ACTUALIZADO: Añadido campo servicio_profesional (obligatorio)
+		// ✅ SQL ACTUALIZADO: Añadido campos servicio_profesional, trabajo_remoto y trabajo_presencial (actualizado: 2025-11-14)
 		String sql = "INSERT INTO especialidades_profesional " +
 		"(profesional_id, categoria_id, servicio_profesional, descripcion, incluye_materiales, " +
-		"costo, tipo_costo, es_principal, orden, fecha_creacion, fecha_actualizacion, activo) " +
-		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), true)";
+		"costo, tipo_costo, es_principal, orden, trabajo_remoto, trabajo_presencial, " +
+		"fecha_creacion, fecha_actualizacion, activo) " +
+		"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), true)";
 
 		try (PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 			for (EspecialidadProfesional esp : especialidades) {
@@ -243,16 +254,19 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
 
 				stmt.setInt(1, profesionalId);
 				stmt.setInt(2, esp.getCategoriaId());
-				stmt.setString(3, esp.getServicioProfesional());  // ✅ NUEVO campo obligatorio
+				stmt.setString(3, esp.getServicioProfesional());  // Campo servicio_profesional
 				stmt.setString(4, esp.getDescripcion());
 				stmt.setBoolean(5, esp.getIncluyeMateriales());
 				stmt.setDouble(6, esp.getCosto());
 				stmt.setString(7, esp.getTipoCosto());
 				stmt.setBoolean(8, esp.getEsPrincipal());
 				stmt.setInt(9, esp.getOrden());
-				
+				// ✅ NUEVOS CAMPOS - Tipo de prestación de trabajo (añadido: 2025-11-14)
+				stmt.setBoolean(10, esp.getTrabajoRemoto() != null ? esp.getTrabajoRemoto() : false);
+				stmt.setBoolean(11, esp.getTrabajoPresencial() != null ? esp.getTrabajoPresencial() : false);
+
 				stmt.executeUpdate();
-				
+
 				// Obtener ID generado
 				ResultSet rs = stmt.getGeneratedKeys();
 				if (rs.next()) {
@@ -265,9 +279,10 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
 
     @Override
     public List<EspecialidadProfesional> obtenerEspecialidadesPorProfesional(Integer profesionalId) throws Exception {
-    	// ✅ SQL ACTUALIZADO: Añadido campo servicio_profesional en el SELECT
+    	// ✅ SQL ACTUALIZADO: Añadido campos servicio_profesional, trabajo_remoto y trabajo_presencial (actualizado: 2025-11-14)
     	String sql = "SELECT e.id, e.profesional_id, e.categoria_id, e.servicio_profesional, e.descripcion, " +
                 "e.incluye_materiales, e.costo, e.tipo_costo, e.es_principal, e.orden, " +
+                "e.trabajo_remoto, e.trabajo_presencial, " +  // ✅ NUEVOS CAMPOS (2025-11-14)
                 "e.fecha_creacion, e.fecha_actualizacion, e.activo, " +
                 "c.nombre AS categoria_nombre, c.descripcion AS categoria_descripcion, " +
                 "c.icono AS categoria_icono, c.color AS categoria_color " +
@@ -303,37 +318,187 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
         }
     }
 
-    // ✅ ACTUALIZACIÓN: DELETE físico para evitar conflictos con restricciones de unicidad
+    // ✅ ACTUALIZADO: Soft delete - marca especialidades como inactivas en lugar de eliminarlas (actualizado: 2025-11-15)
+    // ✅ ACTUALIZADO: También limpiar orden al desactivar para evitar conflictos (actualizado: 2025-11-15)
     private boolean eliminarEspecialidadesPorProfesionalInterno(Connection conn, Integer profesionalId) throws SQLException {
-        String sql = "DELETE FROM especialidades_profesional WHERE profesional_id = ?";
+        String sql = "UPDATE especialidades_profesional SET activo = FALSE, orden = NULL, fecha_actualizacion = NOW() WHERE profesional_id = ? AND activo = TRUE";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setInt(1, profesionalId);
-            int rowsDeleted = stmt.executeUpdate();
-            logger.debug("Eliminadas {} especialidades del profesional {}", rowsDeleted, profesionalId);
+            int rowsUpdated = stmt.executeUpdate();
+            logger.debug("Desactivadas {} especialidades del profesional {}", rowsUpdated, profesionalId);
+            return true;
+        }
+    }
+
+    // ✅ NUEVO: Actualización inteligente de especialidades (añadido: 2025-11-15)
+    // Permite actualizar dinámicamente especialidades sin perder IDs existentes
+    private boolean actualizarEspecialidadesInterno(Connection conn, Integer profesionalId,
+                                                     List<EspecialidadProfesional> especialidades) throws SQLException {
+
+        // 1. Obtener IDs de especialidades que vienen en la solicitud
+        java.util.Set<Integer> idsEnviados = new java.util.HashSet<>();
+        for (EspecialidadProfesional esp : especialidades) {
+            if (esp.getId() != null && esp.getId() > 0) {
+                idsEnviados.add(esp.getId());
+            }
+        }
+
+        // 2. Desactivar especialidades que ya NO vienen en la lista (soft delete)
+        // ✅ ACTUALIZADO: También limpiar orden al desactivar para evitar conflictos (actualizado: 2025-11-15)
+        String sqlDesactivar = "UPDATE especialidades_profesional " +
+                              "SET activo = FALSE, orden = NULL, fecha_actualizacion = NOW() " +
+                              "WHERE profesional_id = ? AND activo = TRUE";
+
+        if (!idsEnviados.isEmpty()) {
+            // Solo desactivar las que NO están en la lista de IDs enviados
+            sqlDesactivar += " AND id NOT IN (" +
+                           String.join(",", java.util.Collections.nCopies(idsEnviados.size(), "?")) +
+                           ")";
+        }
+
+        try (PreparedStatement stmt = conn.prepareStatement(sqlDesactivar)) {
+            stmt.setInt(1, profesionalId);
+            int paramIndex = 2;
+            for (Integer id : idsEnviados) {
+                stmt.setInt(paramIndex++, id);
+            }
+            int desactivadas = stmt.executeUpdate();
+            logger.debug("Desactivadas {} especialidades que ya no están en la lista", desactivadas);
+        }
+
+        // 3. Procesar cada especialidad: actualizar si existe o insertar si es nueva
+        for (int i = 0; i < especialidades.size(); i++) {
+            EspecialidadProfesional esp = especialidades.get(i);
+            esp.setProfesionalId(profesionalId);
+            esp.setOrden(i + 1); // Asignar orden basado en posición en la lista
+
+            if (esp.getId() != null && esp.getId() > 0) {
+                // Actualizar especialidad existente
+                actualizarEspecialidadExistente(conn, esp);
+            } else {
+                // Insertar nueva especialidad
+                insertarNuevaEspecialidad(conn, esp);
+            }
+        }
+
+        logger.debug("Actualización de especialidades completada para profesional {}", profesionalId);
+        return true;
+    }
+
+    // ✅ NUEVO: Actualizar una especialidad existente (añadido: 2025-11-15)
+    private void actualizarEspecialidadExistente(Connection conn, EspecialidadProfesional esp) throws SQLException {
+        String sql = "UPDATE especialidades_profesional SET " +
+                    "categoria_id = ?, " +
+                    "servicio_profesional = ?, " +
+                    "descripcion = ?, " +
+                    "incluye_materiales = ?, " +
+                    "costo = ?, " +
+                    "tipo_costo = ?, " +
+                    "es_principal = ?, " +
+                    "orden = ?, " +
+                    "trabajo_remoto = ?, " +
+                    "trabajo_presencial = ?, " +
+                    "fecha_actualizacion = NOW(), " +
+                    "activo = TRUE " + // Reactivar si estaba inactiva
+                    "WHERE id = ? AND profesional_id = ?";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, esp.getCategoriaId());
+            stmt.setString(2, esp.getServicioProfesional());
+            stmt.setString(3, esp.getDescripcion());
+            stmt.setBoolean(4, esp.getIncluyeMateriales() != null ? esp.getIncluyeMateriales() : false);
+            stmt.setDouble(5, esp.getCosto());
+            stmt.setString(6, esp.getTipoCosto());
+            stmt.setBoolean(7, esp.getEsPrincipal() != null ? esp.getEsPrincipal() : false);
+            stmt.setInt(8, esp.getOrden());
+            stmt.setBoolean(9, esp.getTrabajoRemoto() != null ? esp.getTrabajoRemoto() : false);
+            stmt.setBoolean(10, esp.getTrabajoPresencial() != null ? esp.getTrabajoPresencial() : false);
+            stmt.setInt(11, esp.getId());
+            stmt.setInt(12, esp.getProfesionalId());
+
+            int updated = stmt.executeUpdate();
+            logger.debug("Especialidad {} actualizada: {} filas afectadas", esp.getId(), updated);
+        }
+    }
+
+    // ✅ NUEVO: Insertar una nueva especialidad (añadido: 2025-11-15)
+    private void insertarNuevaEspecialidad(Connection conn, EspecialidadProfesional esp) throws SQLException {
+        String sql = "INSERT INTO especialidades_profesional " +
+                    "(profesional_id, categoria_id, servicio_profesional, descripcion, incluye_materiales, " +
+                    "costo, tipo_costo, es_principal, orden, trabajo_remoto, trabajo_presencial, " +
+                    "fecha_creacion, fecha_actualizacion, activo) " +
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW(), true)";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql, PreparedStatement.RETURN_GENERATED_KEYS)) {
+            stmt.setInt(1, esp.getProfesionalId());
+            stmt.setInt(2, esp.getCategoriaId());
+            stmt.setString(3, esp.getServicioProfesional());
+            stmt.setString(4, esp.getDescripcion());
+            stmt.setBoolean(5, esp.getIncluyeMateriales() != null ? esp.getIncluyeMateriales() : false);
+            stmt.setDouble(6, esp.getCosto());
+            stmt.setString(7, esp.getTipoCosto());
+            stmt.setBoolean(8, esp.getEsPrincipal() != null ? esp.getEsPrincipal() : false);
+            stmt.setInt(9, esp.getOrden());
+            stmt.setBoolean(10, esp.getTrabajoRemoto() != null ? esp.getTrabajoRemoto() : false);
+            stmt.setBoolean(11, esp.getTrabajoPresencial() != null ? esp.getTrabajoPresencial() : false);
+
+            stmt.executeUpdate();
+
+            // Obtener el ID generado
+            ResultSet rs = stmt.getGeneratedKeys();
+            if (rs.next()) {
+                esp.setId(rs.getInt(1));
+                logger.debug("Nueva especialidad insertada con ID: {}", esp.getId());
+            }
+        }
+    }
+
+    // ✅ NUEVO: Desactivar todas las especialidades de un profesional (añadido: 2025-11-15)
+    // ✅ ACTUALIZADO: También limpiar orden al desactivar para evitar conflictos (actualizado: 2025-11-15)
+    private boolean desactivarTodasEspecialidadesInterno(Connection conn, Integer profesionalId) throws SQLException {
+        String sql = "UPDATE especialidades_profesional SET activo = FALSE, orden = NULL, fecha_actualizacion = NOW() " +
+                    "WHERE profesional_id = ? AND activo = TRUE";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setInt(1, profesionalId);
+            int rowsUpdated = stmt.executeUpdate();
+            logger.debug("Desactivadas todas ({}) las especialidades del profesional {}", rowsUpdated, profesionalId);
             return true;
         }
     }
 
     private EspecialidadProfesional mapearEspecialidad(ResultSet rs) throws SQLException {
         EspecialidadProfesional esp = new EspecialidadProfesional();
-        
+
         // Campos de la tabla especialidades_profesional
         esp.setId(rs.getInt("id"));
         esp.setProfesionalId(rs.getInt("profesional_id"));
         esp.setCategoriaId(rs.getInt("categoria_id"));
-        esp.setServicioProfesional(rs.getString("servicio_profesional"));  // ✅ NUEVO campo obligatorio
+        esp.setServicioProfesional(rs.getString("servicio_profesional"));
         esp.setDescripcion(rs.getString("descripcion"));
         esp.setIncluyeMateriales(rs.getBoolean("incluye_materiales"));
         esp.setCosto(rs.getDouble("costo"));
         esp.setTipoCosto(rs.getString("tipo_costo"));
         esp.setEsPrincipal(rs.getBoolean("es_principal"));
         esp.setOrden(rs.getInt("orden"));
+
+        // ✅ NUEVOS CAMPOS - Tipo de prestación de trabajo (añadido: 2025-11-14)
+        try {
+            esp.setTrabajoRemoto(rs.getBoolean("trabajo_remoto"));
+            esp.setTrabajoPresencial(rs.getBoolean("trabajo_presencial"));
+        } catch (SQLException e) {
+            // Si los campos no existen en el ResultSet, usar valores por defecto
+            logger.debug("Campos de tipo de prestación no disponibles, usando valores por defecto");
+            esp.setTrabajoRemoto(false);
+            esp.setTrabajoPresencial(false);
+        }
+
         esp.setFechaCreacion(rs.getTimestamp("fecha_creacion").toLocalDateTime());
         esp.setFechaActualizacion(rs.getTimestamp("fecha_actualizacion").toLocalDateTime());
         esp.setActivo(rs.getBoolean("activo"));
-        
-        // ✅ NUEVO: Campos transientes de categoría (del JOIN)
+
+        // Campos transientes de categoría (del JOIN)
         try {
             esp.setCategoriaNombre(rs.getString("categoria_nombre"));
             esp.setCategoriaDescripcion(rs.getString("categoria_descripcion"));
@@ -343,7 +508,7 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
             // Estos campos podrían no estar si no se hizo JOIN
             logger.debug("Campos de categoría no disponibles en ResultSet");
         }
-        
+
         return esp;
     }
 
@@ -578,7 +743,7 @@ public class ServiciosProfesionalDAOImpl implements ServiciosProfesionalDAO {
                     horario.setDisponibilidadId(disponibilidad.getId());
 
                     stmt.setInt(1, disponibilidad.getId());
-                    stmt.setString(2, horario.getDiaSemana());
+                    stmt.setString(2, horario.getDiaSemana().toLowerCase());
                     stmt.setString(3, horario.getTipoJornada());
 
                     if (horario.getHoraInicio() != null) {

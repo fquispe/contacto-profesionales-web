@@ -323,6 +323,7 @@ async function cargarDatosExistentes() {
 // ESPECIALIDADES
 // =====================================================================
 
+// ✅ ACTUALIZADO: Ahora maneja IDs para actualización dinámica (actualizado: 2025-11-15)
 function agregarEspecialidad(datosExistentes = null) {
     if (appState.especialidades.length >= 3) {
         mostrarAlerta('error', 'No puede registrar más de 3 especialidades');
@@ -333,6 +334,7 @@ function agregarEspecialidad(datosExistentes = null) {
     const esPrimera = index === 0;
 
     const especialidad = {
+        id: datosExistentes?.id || null, // ✅ NUEVO: Guardar ID si es actualización (añadido: 2025-11-15)
         orden: index + 1,
         categoriaId: datosExistentes?.categoriaId || (appState.categorias.length > 0 ? appState.categorias[0].id : null),
         categoriaNombre: datosExistentes?.categoriaNombre || (appState.categorias.length > 0 ? appState.categorias[0].nombre : ''),
@@ -341,7 +343,10 @@ function agregarEspecialidad(datosExistentes = null) {
         incluyeMateriales: datosExistentes?.incluyeMateriales || false,
         costo: datosExistentes?.costo || '',
         tipoCosto: datosExistentes?.tipoCosto || 'hora',
-        esPrincipal: datosExistentes?.esPrincipal || esPrimera
+        esPrincipal: datosExistentes?.esPrincipal || esPrimera,
+        // ✅ NUEVOS CAMPOS - Tipo de prestación de trabajo (añadido: 2025-11-14)
+        trabajoRemoto: datosExistentes?.trabajoRemoto || false,
+        trabajoPresencial: datosExistentes?.trabajoPresencial || false
     };
 
     appState.especialidades.push(especialidad);
@@ -462,6 +467,28 @@ function renderizarEspecialidades() {
                         <option value="dia" ${esp.tipoCosto === 'dia' ? 'selected' : ''}>Por Día</option>
                         <option value="mes" ${esp.tipoCosto === 'mes' ? 'selected' : ''}>Por Mes</option>
                     </select>
+                </div>
+            </div>
+
+            <!-- ✅ NUEVA SECCIÓN - Tipo de prestación de trabajo (añadido: 2025-11-14) -->
+            <div class="form-group" style="margin-top: 15px;">
+                <label class="required">Tipo de Prestación de Trabajo</label>
+                <small style="display: block; color: var(--medium-gray); font-size: 13px; margin-bottom: 10px;">
+                    Seleccione al menos una modalidad de trabajo
+                </small>
+
+                <div class="checkbox-container">
+                    <input type="checkbox" id="trabajo_remoto_${index}"
+                           ${esp.trabajoRemoto ? 'checked' : ''}
+                           onchange="actualizarEspecialidad(${index}, 'trabajoRemoto', this.checked)">
+                    <label for="trabajo_remoto_${index}">🌐 Trabajo Remoto</label>
+                </div>
+
+                <div class="checkbox-container">
+                    <input type="checkbox" id="trabajo_presencial_${index}"
+                           ${esp.trabajoPresencial ? 'checked' : ''}
+                           onchange="actualizarEspecialidad(${index}, 'trabajoPresencial', this.checked)">
+                    <label for="trabajo_presencial_${index}">🏢 Trabajo Presencial</label>
                 </div>
             </div>
 
@@ -882,17 +909,31 @@ async function enviarFormulario(event) {
         return;
     }
 
+    // ✅ ACTUALIZADO: Incluir IDs de especialidades para actualización dinámica (actualizado: 2025-11-15)
     const datosServicio = {
         usuarioId: appState.usuarioId,
-        especialidades: appState.especialidades.map(esp => ({
-            categoriaId: esp.categoriaId,
-            servicioProfesional: esp.servicioProfesional, // ✅ NUEVO campo obligatorio
-            descripcion: esp.descripcion || '',
-            incluyeMateriales: esp.incluyeMateriales || false,
-            costo: parseFloat(esp.costo),
-            tipoCosto: esp.tipoCosto,
-            esPrincipal: esp.esPrincipal || false
-        })),
+        especialidades: appState.especialidades.map(esp => {
+            const especialidadDTO = {
+                categoriaId: esp.categoriaId,
+                servicioProfesional: esp.servicioProfesional, // ✅ NUEVO campo obligatorio
+                descripcion: esp.descripcion || '',
+                incluyeMateriales: esp.incluyeMateriales || false,
+                costo: parseFloat(esp.costo),
+                tipoCosto: esp.tipoCosto,
+                esPrincipal: esp.esPrincipal || false,
+                // ✅ NUEVOS CAMPOS - Tipo de prestación de trabajo (añadido: 2025-11-14)
+                trabajoRemoto: esp.trabajoRemoto || false,
+                trabajoPresencial: esp.trabajoPresencial || false
+            };
+
+            // ✅ IMPORTANTE: Incluir ID solo si existe (para actualización) (añadido: 2025-11-15)
+            // Esto permite al backend saber cuáles especialidades actualizar vs. insertar
+            if (esp.id && esp.id > 0) {
+                especialidadDTO.id = esp.id;
+            }
+
+            return especialidadDTO;
+        }),
         areaServicio: {
             todoPais: appState.todoPais,
             ubicaciones: appState.todoPais ? [] : appState.ubicaciones.map(ub => ({
@@ -987,6 +1028,13 @@ function validarFormulario() {
 
         if (!esp.tipoCosto) {
             mostrarAlerta('error', `La especialidad ${i + 1} debe tener un tipo de costo`);
+            return false;
+        }
+
+        // ✅ NUEVA VALIDACIÓN - Tipo de prestación de trabajo (añadido: 2025-11-14)
+        // Al menos una modalidad de trabajo debe estar seleccionada
+        if (!esp.trabajoRemoto && !esp.trabajoPresencial) {
+            mostrarAlerta('error', `La especialidad ${i + 1} debe tener al menos una modalidad de trabajo seleccionada (Remoto o Presencial)`);
             return false;
         }
     }

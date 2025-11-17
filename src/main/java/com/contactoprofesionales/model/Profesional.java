@@ -6,19 +6,73 @@ import java.util.List;
 /**
  * Modelo para representar un profesional.
  * Corresponde a la tabla 'profesionales' en la BD.
+ *
+ * ⚠️ IMPORTANTE - ACTUALIZADO 2025-11-16:
+ * Este modelo está DEPRECADO para la gestión de perfiles profesionales.
+ *
+ * USO ACTUAL:
+ * - SOLO para búsqueda pública y listado de profesionales (ProfesionalServlet)
+ * - SOLO para consultas de lectura (mostrar perfiles en búsquedas)
+ *
+ * PARA GESTIÓN DE PERFIL USAR:
+ * - PerfilProfesionalCompletoDTO: Para obtener perfil completo con todas las relaciones
+ * - Servlets específicos en controller.perfil: Para CRUD de cada sección del perfil
+ *   * CertificacionesProfesionalServlet
+ *   * ProyectosPortafolioServlet
+ *   * AntecedentesProfesionalServlet
+ *   * RedesSocialesProfesionalServlet
+ *
+ * CAMPOS OBSOLETOS PARA GESTIÓN DE PERFIL:
+ * - habilidades, certificaciones, portafolio: Ahora en tablas relacionadas
+ * - fotoPerfil, fotoPortada: Ya no se gestionan en formulario profesional.html
+ * - nombreCompleto, email, telefono: Ya no se gestionan en formulario profesional.html
+ *
+ * TODO: Refactorizar para separar modelo de búsqueda pública vs gestión de perfil
  */
 public class Profesional {
-    
+
     private Integer id;
     private Integer usuarioId;
+
+    /**
+     * @deprecated Este campo ya no se usa. Las especialidades ahora están en especialidades_profesional
+     */
+    @Deprecated
     private String especialidad;
+
     private String descripcion;
     private String experiencia;
+
+    /**
+     * @deprecated Este campo ya no se usa. Las habilidades están en certificaciones_profesionales
+     */
+    @Deprecated
     private List<String> habilidades;
+
+    /**
+     * @deprecated Este campo ya no se usa. Las certificaciones están en certificaciones_profesionales
+     */
+    @Deprecated
     private List<String> certificaciones;
+
+    /**
+     * @deprecated Este campo ya no se gestiona en el formulario profesional.html (eliminado 2025-11-16)
+     */
+    @Deprecated
     private String fotoPerfil;
+
+    /**
+     * @deprecated Este campo ya no se gestiona en el formulario profesional.html (eliminado 2025-11-16)
+     */
+    @Deprecated
     private String fotoPortada;
+
+    /**
+     * @deprecated Este campo ya no se usa. El portafolio ahora está en proyectos_portafolio
+     */
+    @Deprecated
     private List<String> portafolio;
+
     private Double tarifaHora;
     private Double calificacionPromedio;
     private Integer totalResenas;
@@ -33,10 +87,20 @@ public class Profesional {
     private LocalDateTime fechaRegistro;
     private LocalDateTime ultimaActualizacion;
     private boolean activo;
-    
-    // Información del usuario (para joins)
+
+    /**
+     * Información del usuario (para joins con tabla usuarios)
+     * @deprecated Estos campos ya no se gestionan en el formulario profesional.html (eliminado 2025-11-16)
+     */
+    @Deprecated
     private String nombreCompleto;
+
+    /** @deprecated No se gestiona en formulario profesional.html */
+    @Deprecated
     private String email;
+
+    /** @deprecated No se gestiona en formulario profesional.html */
+    @Deprecated
     private String telefono;
 
     // Constructores

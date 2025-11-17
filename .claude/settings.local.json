@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mvn clean test:*)",
+      "Bash(mvn test:*)",
+      "Bash(dir /B \"E:\\Workspace\\Llankaq\\Monolitico\\contacto-profesionales-web\\src\\main\\resources\\db\\migration\" 2)",
+      "Bash(nul)",
+      "Bash(findstr:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

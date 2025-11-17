@@ -1,6 +1,9 @@
 package com.contactoprofesionales.controller.profesional;
 
+import com.contactoprofesionales.dto.EspecialidadDTO;
 import com.contactoprofesionales.model.Profesional;
+import com.contactoprofesionales.service.profesional.EspecialidadService;
+import com.contactoprofesionales.service.profesional.EspecialidadServiceImpl;
 import com.contactoprofesionales.service.profesional.ProfesionalService;
 import com.contactoprofesionales.util.JsonResponse;
 import com.contactoprofesionales.util.GsonUtil;
@@ -24,11 +27,39 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Servlet para gestionar profesionales.
- * 
+ * Servlet para gestión de profesionales - BÚSQUEDA Y CONSULTA PÚBLICA.
+ *
+ * ⚠️ IMPORTANTE - ACTUALIZADO 2025-11-16:
+ * Este servlet es SOLO para búsqueda y consulta pública de profesionales.
+ * NO se usa para la gestión del perfil profesional.
+ *
+ * USO ACTUAL:
+ * - Búsqueda pública de profesionales (listado, filtros)
+ * - Consulta de perfil público de un profesional
+ * - Verificar existencia de perfil profesional por usuarioId
+ *
+ * PARA GESTIÓN DE PERFIL PROFESIONAL USAR:
+ * - PerfilProfesionalServlet: Para datos básicos del perfil
+ * - CertificacionesProfesionalServlet: Para certificaciones
+ * - ProyectosPortafolioServlet: Para proyectos del portafolio
+ * - AntecedentesProfesionalServlet: Para antecedentes
+ * - RedesSocialesProfesionalServlet: Para redes sociales
+ *
+ * FORMULARIO WEB:
+ * - Este servlet NO es usado por profesional-refactorizado.html
+ * - El formulario usa PerfilProfesionalServlet y servlets específicos de cada sección
+ *
+ * CAMPOS DEPRECADOS:
+ * - fotoPerfil, fotoPortada: Mantenidos para compatibilidad pero no se gestionan en formulario
+ * - nombreCompleto, email, telefono: Mantenidos para búsqueda pública
+ * - habilidades, certificaciones, portafolio: Mantenidos para compatibilidad
+ *
  * Endpoints:
- * - GET /api/profesionales          -> Listar profesionales (con filtros opcionales)
- * - GET /api/profesionales/{id}     -> Obtener profesional específico
+ * - GET /api/profesionales                -> Listar profesionales (con filtros opcionales)
+ * - GET /api/profesionales/{id}           -> Obtener profesional específico
+ * - GET /api/profesionales?usuarioId={id} -> Obtener profesional por usuarioId
+ * - POST /api/profesionales               -> Crear profesional (DEPRECADO - usar registro completo)
+ * - PUT /api/profesionales/{id}           -> Actualizar profesional (DEPRECADO - usar servlets específicos)
  */
 @WebServlet(name = "ProfesionalServlet", urlPatterns = {
     "/api/profesionales",
@@ -40,16 +71,18 @@ public class ProfesionalServlet extends HttpServlet {
     private static final Logger logger = LoggerFactory.getLogger(ProfesionalServlet.class);
     //private final Gson gson = new Gson();
     private static final Gson gson = GsonUtil.createGson();
-    
+
     private ProfesionalService profesionalService;
-    
+    private EspecialidadService especialidadService;
+
     @Override
     public void init() throws ServletException {
         super.init();
         logger.info("=== Inicializando ProfesionalServlet ===");
-        
+
         try {
             this.profesionalService = new ProfesionalService();
+            this.especialidadService = new EspecialidadServiceImpl();
             logger.info("✓ ProfesionalServlet inicializado correctamente");
         } catch (Exception e) {
             logger.error("✗ Error al inicializar ProfesionalServlet", e);
@@ -84,6 +117,42 @@ public class ProfesionalServlet extends HttpServlet {
             } else {
                 // Obtener profesional específico
                 String[] splits = pathInfo.split("/");
+
+                // ✅ NUEVO: Detectar URLs para recursos anidados
+                // Ejemplo: /1/especialidades debe ser manejado directamente
+                if (splits.length > 2 && "especialidades".equals(splits[2])) {
+                    Integer profesionalId = Integer.parseInt(splits[1]);
+                    logger.info("🔍 Obteniendo especialidades para profesional ID: {}", profesionalId);
+
+                    try {
+                        List<EspecialidadDTO> especialidades =
+                            especialidadService.listarPorProfesional(profesionalId);
+
+                        logger.info("✅ Se encontraron {} especialidades para el profesional ID {}",
+                            especialidades.size(), profesionalId);
+
+                        // Construir respuesta en formato {success: true, data: [...]}
+                        JsonResponse jsonResponse = JsonResponse.success(especialidades);
+
+                        response.setStatus(HttpServletResponse.SC_OK);
+                        response.getWriter().write(gson.toJson(jsonResponse));
+                    } catch (Exception e) {
+                        logger.error("❌ Error al obtener especialidades para profesional {}: {}",
+                            profesionalId, e.getMessage(), e);
+                        response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+                            "Error al obtener especialidades");
+                    }
+                    return;
+                }
+
+                // Si tiene más subrutas pero no reconocidas
+                if (splits.length > 2) {
+                    logger.warn("URL con subrutas no reconocida: {}", pathInfo);
+                    response.sendError(HttpServletResponse.SC_NOT_FOUND,
+                        "Recurso no encontrado");
+                    return;
+                }
+
                 if (splits.length >= 2) {
                     Integer profesionalId = Integer.parseInt(splits[1]);
                     obtenerProfesional(profesionalId, response);
@@ -113,12 +182,26 @@ public class ProfesionalServlet extends HttpServlet {
     }
     
     
+    /**
+     * POST - Crear profesional.
+     *
+     * ⚠️ DEPRECADO - ACTUALIZADO 2025-11-16:
+     * Este método está deprecado para la creación de perfiles profesionales.
+     * Se mantiene solo para compatibilidad con código legacy.
+     *
+     * USAR EN SU LUGAR:
+     * - Flujo de registro completo que crea usuario y profesional en una transacción
+     * - PerfilProfesionalServlet para actualizar datos básicos
+     *
+     * @deprecated Usar flujo de registro completo
+     */
+    @Deprecated
     @Override
     protected void doPost(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         long startTime = System.currentTimeMillis();
-        logger.info("POST /api/profesionales");
+        logger.warn("⚠️ POST /api/profesionales - Método DEPRECADO");
         
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
@@ -175,12 +258,33 @@ public class ProfesionalServlet extends HttpServlet {
         }
     }
     
+    /**
+     * PUT - Actualizar profesional.
+     *
+     * ⚠️ DEPRECADO - ACTUALIZADO 2025-11-16:
+     * Este método está deprecado para la actualización de perfiles profesionales.
+     * Se mantiene solo para compatibilidad con código legacy.
+     *
+     * USAR EN SU LUGAR:
+     * - PerfilProfesionalServlet (PUT /api/profesional/perfil): Para datos básicos
+     * - CertificacionesProfesionalServlet: Para certificaciones
+     * - ProyectosPortafolioServlet: Para proyectos
+     * - AntecedentesProfesionalServlet: Para antecedentes
+     * - RedesSocialesProfesionalServlet: Para redes sociales
+     *
+     * FORMULARIO WEB:
+     * - profesional-refactorizado.html NO usa este endpoint
+     * - Usa los servlets específicos mencionados arriba
+     *
+     * @deprecated Usar servlets específicos por sección del perfil
+     */
+    @Deprecated
     @Override
     protected void doPut(HttpServletRequest request, HttpServletResponse response)
             throws ServletException, IOException {
-        
+
         long startTime = System.currentTimeMillis();
-        logger.info("PUT /api/profesionales");
+        logger.warn("⚠️ PUT /api/profesionales - Método DEPRECADO");
         
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
@@ -346,28 +450,38 @@ public class ProfesionalServlet extends HttpServlet {
     
     /**
      * Obtiene un profesional específico por ID.
+     *
+     * ⚠️ NOTA - ACTUALIZADO 2025-11-16:
+     * Este método devuelve campos deprecados para compatibilidad con búsqueda pública.
+     * Los campos fotoPerfil, fotoPortada, nombreCompleto, email, telefono se mantienen
+     * SOLO para mostrar perfiles en búsquedas públicas, pero YA NO se gestionan en
+     * el formulario profesional-refactorizado.html.
+     *
+     * PARA GESTIÓN DE PERFIL usar:
+     * - GET /api/profesional/perfil: Devuelve PerfilProfesionalCompletoDTO con todas las relaciones
      */
-    private void obtenerProfesional(Integer profesionalId, HttpServletResponse response) 
+    private void obtenerProfesional(Integer profesionalId, HttpServletResponse response)
             throws Exception {
-        
+
     	logger.info("🔍 Buscando profesional con ID: {}", profesionalId);
-    	
+
     	try {
             Profesional profesional = profesionalService.obtenerProfesional(profesionalId);
-            
+
             if (profesional == null) {
                 logger.warn("⚠️ Profesional con ID {} no encontrado", profesionalId);
                 sendNotFound(response, "Profesional no encontrado");
                 return;
             }
-            
+
             // Construir respuesta con datos completos
             Map<String, Object> profesionalData = new HashMap<>();
          // Campos principales
             profesionalData.put("id", profesional.getId());
             profesionalData.put("usuarioId", profesional.getUsuarioId());
-            
-            // Información personal (de JOIN con users)
+
+            // ⚠️ DEPRECADO - Información personal (de JOIN con users)
+            // Mantenido SOLO para búsqueda pública, NO se gestiona en formulario profesional.html
             profesionalData.put("nombreCompleto", profesional.getNombreCompleto() != null ? profesional.getNombreCompleto() : "");
             profesionalData.put("email", profesional.getEmail() != null ? profesional.getEmail() : "");
             profesionalData.put("telefono", profesional.getTelefono() != null ? profesional.getTelefono() : "");
@@ -377,11 +491,15 @@ public class ProfesionalServlet extends HttpServlet {
             profesionalData.put("descripcion", profesional.getDescripcion() != null ? profesional.getDescripcion() : "");
             profesionalData.put("experiencia", profesional.getExperiencia() != null ? profesional.getExperiencia() : "");
             
-            // Habilidades y certificaciones (pueden ser JSON strings)
+            // ⚠️ DEPRECADO - Habilidades y certificaciones (pueden ser JSON strings)
+            // Ahora se usan tablas relacionadas: certificaciones_profesionales
             profesionalData.put("habilidades", profesional.getHabilidades() != null ? profesional.getHabilidades() : "");
             profesionalData.put("certificaciones", profesional.getCertificaciones() != null ? profesional.getCertificaciones() : "");
-            
-            // Multimedia
+
+            // ⚠️ DEPRECADO - Multimedia
+            // fotoPerfil, fotoPortada: Ya NO se gestionan en formulario profesional-refactorizado.html
+            // portafolio: Ahora se usa tabla proyectos_portafolio
+            // Mantenido SOLO para búsqueda pública
             profesionalData.put("fotoPerfil", profesional.getFotoPerfil() != null ? profesional.getFotoPerfil() : "");
             profesionalData.put("fotoPortada", profesional.getFotoPortada() != null ? profesional.getFotoPortada() : "");
             profesionalData.put("portafolio", profesional.getPortafolio() != null ? profesional.getPortafolio() : "");
