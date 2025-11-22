@@ -63,6 +63,11 @@ public class RedesSocialesProfesionalDAOImpl implements RedesSocialesProfesional
     public Integer guardar(RedSocialProfesional red) throws Exception {
         logger.info("Guardando red social {} para profesional {}", red.getTipoRed(), red.getProfesionalId());
 
+        // Normalizar tipo de red a minúsculas (la BD solo acepta minúsculas)
+        if (red.getTipoRed() != null) {
+            red.setTipoRed(red.getTipoRed().toLowerCase().trim());
+        }
+
         String sql = "INSERT INTO redes_sociales_profesional " +
                     "(profesional_id, tipo_red, url, verificada, activo, fecha_creacion, fecha_actualizacion) " +
                     "VALUES (?, ?, ?, FALSE, TRUE, NOW(), NOW())";
@@ -264,6 +269,11 @@ public class RedesSocialesProfesionalDAOImpl implements RedesSocialesProfesional
     }
 
     private void insertarInterno(Connection conn, RedSocialProfesional red) throws SQLException {
+        // Normalizar tipo de red a minúsculas (la BD solo acepta minúsculas)
+        if (red.getTipoRed() != null) {
+            red.setTipoRed(red.getTipoRed().toLowerCase().trim());
+        }
+
         String sql = "INSERT INTO redes_sociales_profesional " +
                     "(profesional_id, tipo_red, url, verificada, activo, fecha_creacion, fecha_actualizacion) " +
                     "VALUES (?, ?, ?, FALSE, TRUE, NOW(), NOW())";

@@ -5,7 +5,8 @@
       "Bash(mvn test:*)",
       "Bash(dir /B \"E:\\Workspace\\Llankaq\\Monolitico\\contacto-profesionales-web\\src\\main\\resources\\db\\migration\" 2)",
       "Bash(nul)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "Bash(psql:*)"
     ],
     "deny": [],
     "ask": []

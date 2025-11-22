@@ -31,7 +31,8 @@ import java.util.List;
  * - DELETE: Elimina una red social (soft delete)
  *
  * Notas importantes:
- * - Tipos de redes soportadas: Facebook, Instagram, LinkedIn, Twitter, YouTube, TikTok, WhatsApp, Website, Otros
+ * - Tipos de redes soportadas (case-insensitive): facebook, instagram, linkedin, twitter, youtube, tiktok, whatsapp, website, otro
+ * - Los tipos se normalizan automáticamente a minúsculas antes de guardar en BD
  * - Se puede hacer actualización masiva enviando un array de redes en el PUT
  * - La actualización masiva usa transacciones: desactiva las no enviadas, actualiza existentes, inserta nuevas
  *
@@ -135,11 +136,11 @@ public class RedesSocialesProfesionalServlet extends HttpServlet {
      *
      * Request Body:
      * {
-     *   "tipoRed": "Facebook",
+     *   "tipoRed": "Facebook",  // Se acepta con mayúsculas/minúsculas, se normaliza automáticamente
      *   "url": "https://facebook.com/profesional"
      * }
      *
-     * Tipos válidos: Facebook, Instagram, LinkedIn, Twitter, YouTube, TikTok, WhatsApp, Website, Otros
+     * Tipos válidos (case-insensitive): facebook, instagram, linkedin, twitter, youtube, tiktok, whatsapp, website, otro
      *
      * Response 201: Red social creada exitosamente
      * Response 400: Datos inválidos
@@ -182,6 +183,9 @@ public class RedesSocialesProfesionalServlet extends HttpServlet {
                 response.getWriter().write(gson.toJson(JsonResponse.error("La URL de la red social es requerida")));
                 return;
             }
+
+            // ✅ Normalizar tipo de red a minúsculas (la BD solo acepta minúsculas)
+            red.setTipoRed(red.getTipoRed().toLowerCase().trim());
 
             // ✅ Guardar red social
             Integer id = redesDAO.guardar(red);
@@ -292,6 +296,11 @@ public class RedesSocialesProfesionalServlet extends HttpServlet {
             return;
         }
 
+        // ✅ Normalizar tipo de red a minúsculas (la BD solo acepta minúsculas)
+        if (red.getTipoRed() != null) {
+            red.setTipoRed(red.getTipoRed().toLowerCase().trim());
+        }
+
         // ✅ Actualizar red social
         boolean actualizado = redesDAO.actualizar(red);
 
@@ -336,6 +345,13 @@ public class RedesSocialesProfesionalServlet extends HttpServlet {
             response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
             response.getWriter().write(gson.toJson(JsonResponse.error("La lista de redes sociales no puede estar vacía")));
             return;
+        }
+
+        // ✅ Normalizar todos los tipos de red a minúsculas (la BD solo acepta minúsculas)
+        for (RedSocialProfesional red : redes) {
+            if (red.getTipoRed() != null) {
+                red.setTipoRed(red.getTipoRed().toLowerCase().trim());
+            }
         }
 
         // ✅ Guardar múltiples redes en transacción
