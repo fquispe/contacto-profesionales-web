@@ -7,12 +7,20 @@ import java.io.Serializable;
  * Permite una búsqueda flexible con múltiples filtros opcionales.
  */
 public class BusquedaCriteriosDTO implements Serializable {
-    
+
     private static final long serialVersionUID = 1L;
-    
-    private String especialidad;
-    private String distrito;
-    private Double calificacionMinima;
+
+    // NUEVOS CAMPOS REFACTORIZADOS
+    private Integer categoriaId; // ID de categoría seleccionada (categorias_servicio)
+    private String especialidadTexto; // Texto libre cuando se selecciona "Otro"
+
+    // CAMPOS EXISTENTES (compatibilidad hacia atrás)
+    private String especialidad; // Especialidad seleccionada de la lista
+
+    // CAMPOS COMENTADOS/DEPRECADOS (no se usan en nueva versión)
+    // private String distrito;
+    // private Double calificacionMinima;
+
     private Double tarifaMaxima;
     private Boolean disponible;
     private String ordenarPor; // "calificacion", "resenas", "tarifa"
@@ -28,39 +36,60 @@ public class BusquedaCriteriosDTO implements Serializable {
         this.ordenDireccion = "desc";
     }
     
-    // Constructor con parámetros principales
-    public BusquedaCriteriosDTO(String especialidad, String distrito, Double calificacionMinima) {
+    // Constructor con parámetros principales (ACTUALIZADO)
+    public BusquedaCriteriosDTO(Integer categoriaId, String especialidad, String especialidadTexto) {
         this();
+        this.categoriaId = categoriaId;
         this.especialidad = especialidad;
-        this.distrito = distrito;
-        this.calificacionMinima = calificacionMinima;
+        this.especialidadTexto = especialidadTexto;
     }
     
-    // Getters y Setters
+    // Getters y Setters - NUEVOS CAMPOS
+    public Integer getCategoriaId() {
+        return categoriaId;
+    }
+
+    public void setCategoriaId(Integer categoriaId) {
+        this.categoriaId = categoriaId;
+    }
+
+    public String getEspecialidadTexto() {
+        return especialidadTexto;
+    }
+
+    public void setEspecialidadTexto(String especialidadTexto) {
+        this.especialidadTexto = especialidadTexto != null && !especialidadTexto.trim().isEmpty()
+                                ? especialidadTexto.trim()
+                                : null;
+    }
+
+    // Getters y Setters - CAMPOS EXISTENTES
     public String getEspecialidad() {
         return especialidad;
     }
-    
+
     public void setEspecialidad(String especialidad) {
-        this.especialidad = especialidad != null && !especialidad.trim().isEmpty() 
-                           ? especialidad.trim() 
+        this.especialidad = especialidad != null && !especialidad.trim().isEmpty()
+                           ? especialidad.trim()
                            : null;
     }
-    
+
+    // COMENTADO: Métodos de distrito y calificación (no se usan en nueva versión)
+    /*
     public String getDistrito() {
         return distrito;
     }
-    
+
     public void setDistrito(String distrito) {
-        this.distrito = distrito != null && !distrito.trim().isEmpty() 
-                       ? distrito.trim() 
+        this.distrito = distrito != null && !distrito.trim().isEmpty()
+                       ? distrito.trim()
                        : null;
     }
-    
+
     public Double getCalificacionMinima() {
         return calificacionMinima;
     }
-    
+
     public void setCalificacionMinima(Double calificacionMinima) {
         // Validar rango 0-5
         if (calificacionMinima != null) {
@@ -75,6 +104,7 @@ public class BusquedaCriteriosDTO implements Serializable {
             this.calificacionMinima = null;
         }
     }
+    */
     
     public Double getTarifaMaxima() {
         return tarifaMaxima;
@@ -151,54 +181,56 @@ public class BusquedaCriteriosDTO implements Serializable {
     
     /**
      * Verifica si hay algún criterio de búsqueda aplicado.
+     * ACTUALIZADO: Incluye nuevos campos categoriaId y especialidadTexto
      */
     public boolean tieneAlgunFiltro() {
-        return especialidad != null || 
-               distrito != null || 
-               calificacionMinima != null || 
-               tarifaMaxima != null || 
+        return categoriaId != null ||
+               especialidad != null ||
+               especialidadTexto != null ||
+               tarifaMaxima != null ||
                disponible != null;
     }
-    
+
     /**
      * Obtiene una descripción legible de los criterios de búsqueda.
+     * ACTUALIZADO: Incluye nuevos campos categoriaId y especialidadTexto
      */
     public String getDescripcion() {
         StringBuilder desc = new StringBuilder();
-        
+
+        if (categoriaId != null) {
+            desc.append("Categoría ID: ").append(categoriaId);
+        }
+
         if (especialidad != null) {
+            if (desc.length() > 0) desc.append(", ");
             desc.append("Especialidad: ").append(especialidad);
         }
-        
-        if (distrito != null) {
+
+        if (especialidadTexto != null) {
             if (desc.length() > 0) desc.append(", ");
-            desc.append("Distrito: ").append(distrito);
+            desc.append("Búsqueda libre: ").append(especialidadTexto);
         }
-        
-        if (calificacionMinima != null) {
-            if (desc.length() > 0) desc.append(", ");
-            desc.append("Calificación mínima: ").append(calificacionMinima);
-        }
-        
+
         if (tarifaMaxima != null) {
             if (desc.length() > 0) desc.append(", ");
             desc.append("Tarifa máxima: S/ ").append(tarifaMaxima);
         }
-        
+
         if (disponible != null) {
             if (desc.length() > 0) desc.append(", ");
             desc.append("Solo disponibles");
         }
-        
+
         return desc.length() > 0 ? desc.toString() : "Sin filtros";
     }
-    
+
     @Override
     public String toString() {
         return "BusquedaCriteriosDTO{" +
-                "especialidad='" + especialidad + '\'' +
-                ", distrito='" + distrito + '\'' +
-                ", calificacionMinima=" + calificacionMinima +
+                "categoriaId=" + categoriaId +
+                ", especialidad='" + especialidad + '\'' +
+                ", especialidadTexto='" + especialidadTexto + '\'' +
                 ", tarifaMaxima=" + tarifaMaxima +
                 ", disponible=" + disponible +
                 ", ordenarPor='" + ordenarPor + '\'' +

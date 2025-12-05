@@ -15,6 +15,14 @@ public class SolicitudServicioRequest {
     private String distrito;
     private String codigoPostal;
     private String referencia;
+
+    // NUEVOS CAMPOS - Migración V008: Ubicación estructurada y modalidad
+    private Integer departamentoId;  // ID del departamento (NULL si remoto)
+    private Integer provinciaId;     // ID de la provincia (NULL si remoto)
+    private Integer distritoId;      // ID del distrito (NULL si remoto)
+    private String tipoPrestacion;   // "REMOTO" o "PRESENCIAL"
+    private Integer especialidadId;  // FK a especialidades_profesional
+
     private String fechaServicio; // ISO format
     private String horaServicio; // HH:mm
     private String urgencia;
@@ -85,6 +93,48 @@ public class SolicitudServicioRequest {
 
     public void setReferencia(String referencia) {
         this.referencia = referencia;
+    }
+
+    // NUEVOS GETTERS Y SETTERS - Migración V008
+
+    public Integer getDepartamentoId() {
+        return departamentoId;
+    }
+
+    public void setDepartamentoId(Integer departamentoId) {
+        this.departamentoId = departamentoId;
+    }
+
+    public Integer getProvinciaId() {
+        return provinciaId;
+    }
+
+    public void setProvinciaId(Integer provinciaId) {
+        this.provinciaId = provinciaId;
+    }
+
+    public Integer getDistritoId() {
+        return distritoId;
+    }
+
+    public void setDistritoId(Integer distritoId) {
+        this.distritoId = distritoId;
+    }
+
+    public String getTipoPrestacion() {
+        return tipoPrestacion;
+    }
+
+    public void setTipoPrestacion(String tipoPrestacion) {
+        this.tipoPrestacion = tipoPrestacion;
+    }
+
+    public Integer getEspecialidadId() {
+        return especialidadId;
+    }
+
+    public void setEspecialidadId(Integer especialidadId) {
+        this.especialidadId = especialidadId;
     }
 
     public String getFechaServicio() {

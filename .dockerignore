@@ -1,0 +1,67 @@
+# ============================================
+# .dockerignore
+# Excluye archivos innecesarios del contexto de Docker
+# ============================================
+
+# Directorios de build
+target/
+build/
+out/
+
+# IDEs
+.idea/
+.vscode/
+.settings/
+.project
+.classpath
+*.iml
+*.iws
+*.ipr
+.DS_Store
+
+# Control de versiones
+.git/
+.gitignore
+.gitattributes
+
+# Documentación
+*.md
+docs/
+*.txt
+
+# Node modules (si existen)
+node_modules/
+npm-debug.log
+
+# Archivos temporales
+*.log
+*.tmp
+*.temp
+*.swp
+*.bak
+*.cache
+
+# Tests
+test/
+tests/
+*.test.*
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+Jenkinsfile
+jenkins/
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Archivos de configuración local
+.env
+.env.local
+*.local
+
+# Archivos de sistema
+Thumbs.DB
+.DS_Store

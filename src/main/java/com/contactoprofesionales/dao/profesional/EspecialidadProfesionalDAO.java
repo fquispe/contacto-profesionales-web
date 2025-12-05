@@ -1,5 +1,6 @@
 package com.contactoprofesionales.dao.profesional;
 
+import com.contactoprofesionales.dto.ModalidadTrabajoDTO;
 import com.contactoprofesionales.exception.DatabaseException;
 import com.contactoprofesionales.model.EspecialidadProfesional;
 
@@ -86,12 +87,26 @@ public interface EspecialidadProfesionalDAO {
 
     /**
      * Verifica si un profesional ya tiene una especialidad con una categoría específica
-     * 
+     *
      * @param profesionalId ID del profesional
      * @param categoriaId ID de la categoría
      * @return true si existe, false si no
      * @throws DatabaseException si ocurre un error en la BD
      */
-    boolean existeEspecialidadConCategoria(Integer profesionalId, Integer categoriaId) 
+    boolean existeEspecialidadConCategoria(Integer profesionalId, Integer categoriaId)
+            throws DatabaseException;
+
+    /**
+     * Obtiene los flags de modalidad de trabajo (remoto/presencial) de una especialidad.
+     * Se utiliza en el formulario de solicitud de servicio para determinar qué opciones
+     * de modalidad habilitar dinámicamente.
+     *
+     * @param especialidadId ID de la especialidad
+     * @return ModalidadTrabajoDTO con los flags trabajo_remoto y trabajo_presencial,
+     *         o null si no se encuentra la especialidad
+     * @throws DatabaseException si ocurre un error en la BD
+     * @since Migración V008
+     */
+    ModalidadTrabajoDTO obtenerModalidadTrabajo(Integer especialidadId)
             throws DatabaseException;
 }

@@ -124,17 +124,38 @@ public class PerfilProfesionalServlet extends HttpServlet {
         long startTime = System.currentTimeMillis();
         logger.info("GET /api/profesional/perfil - Obteniendo perfil completo");
 
+        // ✅ Configurar CORS para permitir credenciales
+        setCorsHeaders(request, response);
+
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
         try {
-            // ✅ TODO: Obtener profesionalId del token JWT
-            Integer profesionalId = obtenerProfesionalIdDeToken(request);
+            // ✅ ACTUALIZADO 2025-12-04: Obtener profesionalId desde query parameter (localStorage)
+            String profesionalIdParam = request.getParameter("profesionalId");
+
+            if (profesionalIdParam == null || profesionalIdParam.trim().isEmpty()) {
+                logger.warn("✗ No se proporcionó profesionalId en la petición");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write(gson.toJson(JsonResponse.error("Parámetro profesionalId requerido")));
+                return;
+            }
+
+            Integer profesionalId = null;
+            try {
+                profesionalId = Integer.parseInt(profesionalIdParam);
+                logger.info("✓ ProfesionalId recibido desde query parameter: {}", profesionalId);
+            } catch (NumberFormatException e) {
+                logger.warn("✗ profesionalId inválido: {}", profesionalIdParam);
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write(gson.toJson(JsonResponse.error("profesionalId debe ser un número válido")));
+                return;
+            }
 
             if (profesionalId == null) {
-                logger.warn("✗ No se pudo obtener el profesional del token");
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write(gson.toJson(JsonResponse.error("No autenticado")));
+                logger.warn("✗ profesionalId es null");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write(gson.toJson(JsonResponse.error("profesionalId requerido")));
                 return;
             }
 
@@ -385,15 +406,37 @@ public class PerfilProfesionalServlet extends HttpServlet {
         long startTime = System.currentTimeMillis();
         logger.info("PUT /api/profesional/perfil - Actualizando perfil básico");
 
+        // ✅ Configurar CORS para permitir credenciales
+        setCorsHeaders(request, response);
+
         response.setContentType("application/json");
         response.setCharacterEncoding("UTF-8");
 
         try {
-            Integer profesionalId = obtenerProfesionalIdDeToken(request);
+            // ✅ ACTUALIZADO 2025-12-04: Obtener profesionalId desde query parameter (localStorage)
+            String profesionalIdParam = request.getParameter("profesionalId");
+
+            if (profesionalIdParam == null || profesionalIdParam.trim().isEmpty()) {
+                logger.warn("✗ No se proporcionó profesionalId en la petición PUT");
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write(gson.toJson(JsonResponse.error("Parámetro profesionalId requerido")));
+                return;
+            }
+
+            Integer profesionalId = null;
+            try {
+                profesionalId = Integer.parseInt(profesionalIdParam);
+                logger.info("✓ ProfesionalId recibido desde query parameter (PUT): {}", profesionalId);
+            } catch (NumberFormatException e) {
+                logger.warn("✗ profesionalId inválido en PUT: {}", profesionalIdParam);
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write(gson.toJson(JsonResponse.error("profesionalId debe ser un número válido")));
+                return;
+            }
 
             if (profesionalId == null) {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write(gson.toJson(JsonResponse.error("No autenticado")));
+                response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+                response.getWriter().write(gson.toJson(JsonResponse.error("profesionalId requerido")));
                 return;
             }
 
@@ -488,27 +531,31 @@ public class PerfilProfesionalServlet extends HttpServlet {
     }
 
     /**
-     * Obtiene el ID del profesional del token JWT.
-     * ✅ TODO: Implementar extracción real del token JWT
+     * Obtiene el ID del profesional desde la sesión del usuario autenticado.
+     * ✅ CORREGIDO 2025-12-04: Obtiene el profesionalId desde HttpSession
      *
      * @param request Request HTTP
      * @return ID del profesional o null si no está autenticado
      */
     private Integer obtenerProfesionalIdDeToken(HttpServletRequest request) {
-        // ✅ TODO: Implementar extracción real del token JWT
-        // Por ahora retornamos un ID de prueba
-        // En producción, extraer del header Authorization: Bearer <token>
-        // y decodificar el JWT para obtener el profesionalId
+        // ✅ Obtener sesión (false = no crear una nueva si no existe)
+        jakarta.servlet.http.HttpSession session = request.getSession(false);
 
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            // String token = authHeader.substring(7);
-            // return jwtService.extractProfesionalId(token);
-            // Por ahora retornamos ID de prueba
-            return 1;
+        if (session == null) {
+            logger.warn("No hay sesión activa");
+            return null;
         }
 
-        return null;
+        // ✅ Obtener profesionalId desde la sesión
+        Integer profesionalId = (Integer) session.getAttribute("profesionalId");
+
+        if (profesionalId == null) {
+            logger.warn("No hay profesionalId en la sesión - Usuario no es profesional o no ha iniciado sesión");
+            return null;
+        }
+
+        logger.debug("ProfesionalId obtenido de la sesión: {}", profesionalId);
+        return profesionalId;
     }
 
     /**
@@ -520,6 +567,49 @@ public class PerfilProfesionalServlet extends HttpServlet {
 
         response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
         response.getWriter().write(gson.toJson(JsonResponse.error("Error interno del servidor: " + e.getMessage())));
+    }
+
+    /**
+     * Maneja peticiones OPTIONS para CORS preflight.
+     * ✅ AGREGADO 2025-12-04: Soporte para CORS con credenciales
+     */
+    @Override
+    protected void doOptions(HttpServletRequest request, HttpServletResponse response)
+            throws ServletException, IOException {
+        setCorsHeaders(request, response);
+        response.setStatus(HttpServletResponse.SC_OK);
+    }
+
+    /**
+     * Configura los headers CORS para permitir credenciales.
+     * ✅ AGREGADO 2025-12-04: CORS con credentials
+     *
+     * IMPORTANTE: Cuando se usa credentials: 'include' en el frontend,
+     * NO se puede usar Access-Control-Allow-Origin: "*"
+     * Se debe especificar el origen exacto.
+     */
+    private void setCorsHeaders(HttpServletRequest request, HttpServletResponse response) {
+        String origin = request.getHeader("Origin");
+
+        // Permitir el origen desde donde viene la petición
+        if (origin != null) {
+            response.setHeader("Access-Control-Allow-Origin", origin);
+        } else {
+            // Fallback para peticiones sin Origin header
+            response.setHeader("Access-Control-Allow-Origin", "http://localhost:9091");
+        }
+
+        // ✅ CRÍTICO: Permitir que se envíen credenciales (cookies, sesión)
+        response.setHeader("Access-Control-Allow-Credentials", "true");
+
+        // Métodos HTTP permitidos
+        response.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+
+        // Headers permitidos
+        response.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+
+        // Tiempo de caché para preflight
+        response.setHeader("Access-Control-Max-Age", "3600");
     }
 
     @Override

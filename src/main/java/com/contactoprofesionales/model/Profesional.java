@@ -4,30 +4,51 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Modelo para representar un profesional.
- * Corresponde a la tabla 'profesionales' en la BD.
+ * Modelo de persistencia para la tabla 'profesionales'.
+ * Representa el registro de un profesional en la base de datos.
  *
- * ⚠️ IMPORTANTE - ACTUALIZADO 2025-11-16:
- * Este modelo está DEPRECADO para la gestión de perfiles profesionales.
+ * ⚠️ IMPORTANTE - ACTUALIZADO 2025-12-03:
+ * Este modelo es SOLO para operaciones de persistencia (DAO).
+ * NO usar directamente en controladores ni servicios.
  *
- * USO ACTUAL:
- * - SOLO para búsqueda pública y listado de profesionales (ProfesionalServlet)
- * - SOLO para consultas de lectura (mostrar perfiles en búsquedas)
+ * ═══════════════════════════════════════════════════════════════════════════════
+ * ARQUITECTURA DE SEPARACIÓN DE RESPONSABILIDADES:
+ * ═══════════════════════════════════════════════════════════════════════════════
  *
- * PARA GESTIÓN DE PERFIL USAR:
- * - PerfilProfesionalCompletoDTO: Para obtener perfil completo con todas las relaciones
- * - Servlets específicos en controller.perfil: Para CRUD de cada sección del perfil
- *   * CertificacionesProfesionalServlet
- *   * ProyectosPortafolioServlet
- *   * AntecedentesProfesionalServlet
- *   * RedesSocialesProfesionalServlet
+ * 1. BÚSQUEDA PÚBLICA DE PROFESIONALES:
+ *    ✅ Usar: ProfesionalBusquedaDTO
+ *    📍 Servicio: BusquedaProfesionalesService
+ *    📍 Controlador: BusquedaProfesionalesServlet
+ *    Propósito: Mostrar resultados de búsqueda optimizados, sin datos sensibles
  *
- * CAMPOS OBSOLETOS PARA GESTIÓN DE PERFIL:
- * - habilidades, certificaciones, portafolio: Ahora en tablas relacionadas
- * - fotoPerfil, fotoPortada: Ya no se gestionan en formulario profesional.html
- * - nombreCompleto, email, telefono: Ya no se gestionan en formulario profesional.html
+ * 2. GESTIÓN DE PERFIL PROFESIONAL:
+ *    ✅ Usar: PerfilProfesionalCompletoDTO
+ *    📍 Servicio: Múltiples servicios especializados (ver abajo)
+ *    📍 Controladores en package controller.perfil:
+ *       - PerfilProfesionalServlet: Datos básicos del perfil
+ *       - CertificacionesProfesionalServlet: Certificaciones
+ *       - ProyectosPortafolioServlet: Proyectos del portafolio
+ *       - AntecedentesProfesionalServlet: Antecedentes
+ *       - RedesSocialesProfesionalServlet: Redes sociales
+ *    Propósito: CRUD completo del perfil con todas las relaciones
  *
- * TODO: Refactorizar para separar modelo de búsqueda pública vs gestión de perfil
+ * 3. PERSISTENCIA (SOLO ESTE MODELO):
+ *    📍 Capa DAO: ProfesionalDAO y ProfesionalDAOImpl
+ *    Propósito: Mapeo directo con la tabla de base de datos
+ *
+ * ═══════════════════════════════════════════════════════════════════════════════
+ *
+ * CAMPOS DEPRECADOS (mantener para compatibilidad con código legacy):
+ * - @Deprecated especialidad: Ahora en tabla especialidades_profesional
+ * - @Deprecated habilidades: Ahora en tabla certificaciones_profesionales
+ * - @Deprecated certificaciones: Ahora en tabla certificaciones_profesionales
+ * - @Deprecated fotoPerfil: Ya no se gestiona en formulario
+ * - @Deprecated fotoPortada: Ya no se gestiona en formulario
+ * - @Deprecated portafolio: Ahora en tabla proyectos_portafolio
+ * - @Deprecated nombreCompleto, email, telefono: Datos de usuario, no de profesional
+ *
+ * ✅ REFACTORIZACIÓN COMPLETADA: 2025-12-03
+ * Separación clara entre modelo de persistencia y DTOs de negocio.
  */
 public class Profesional {
 
@@ -35,40 +56,70 @@ public class Profesional {
     private Integer usuarioId;
 
     /**
-     * @deprecated Este campo ya no se usa. Las especialidades ahora están en especialidades_profesional
+     * ID de la especialidad seleccionada (para resultados de búsqueda)
+     */
+    private Integer especialidadId;
+
+    /**
+     * @deprecated CAMPO OBSOLETO - Mantener solo para compatibilidad con código legacy.
+     * Las especialidades ahora se gestionan en la tabla 'especialidades_profesional'.
+     * Usar: EspecialidadProfesionalDAO para gestionar especialidades.
+     * IMPORTANTE: Este campo será ELIMINADO en la versión 3.0
      */
     @Deprecated
     private String especialidad;
 
     private String descripcion;
+
+    /**
+     * Biografía profesional extendida del profesional.
+     * Campo agregado en V006__refactorizar_perfil_profesional.sql
+     */
+    private String biografiaProfesional;
+
     private String experiencia;
 
     /**
-     * @deprecated Este campo ya no se usa. Las habilidades están en certificaciones_profesionales
+     * @deprecated CAMPO OBSOLETO - Mantener solo para compatibilidad con código legacy.
+     * Las habilidades ahora se gestionan en la tabla 'certificaciones_profesionales'.
+     * Usar: CertificacionesProfesionalServlet y su DAO correspondiente.
+     * IMPORTANTE: Este campo será ELIMINADO en la versión 3.0
      */
     @Deprecated
     private List<String> habilidades;
 
     /**
-     * @deprecated Este campo ya no se usa. Las certificaciones están en certificaciones_profesionales
+     * @deprecated CAMPO OBSOLETO - Mantener solo para compatibilidad con código legacy.
+     * Las certificaciones ahora se gestionan en la tabla 'certificaciones_profesionales'.
+     * Usar: CertificacionesProfesionalServlet y su DAO correspondiente.
+     * IMPORTANTE: Este campo será ELIMINADO en la versión 3.0
      */
     @Deprecated
     private List<String> certificaciones;
 
     /**
-     * @deprecated Este campo ya no se gestiona en el formulario profesional.html (eliminado 2025-11-16)
+     * @deprecated CAMPO OBSOLETO - Mantener solo para compatibilidad con código legacy.
+     * Ya NO se gestiona en el formulario profesional.html (eliminado 2025-11-16).
+     * Las fotos de perfil ahora se manejan a nivel de usuario, no de profesional.
+     * IMPORTANTE: Este campo será ELIMINADO en la versión 3.0
      */
     @Deprecated
     private String fotoPerfil;
 
     /**
-     * @deprecated Este campo ya no se gestiona en el formulario profesional.html (eliminado 2025-11-16)
+     * @deprecated CAMPO OBSOLETO - Mantener solo para compatibilidad con código legacy.
+     * Ya NO se gestiona en el formulario profesional.html (eliminado 2025-11-16).
+     * Las fotos de portada ahora se manejan a nivel de usuario, no de profesional.
+     * IMPORTANTE: Este campo será ELIMINADO en la versión 3.0
      */
     @Deprecated
     private String fotoPortada;
 
     /**
-     * @deprecated Este campo ya no se usa. El portafolio ahora está en proyectos_portafolio
+     * @deprecated CAMPO OBSOLETO - Mantener solo para compatibilidad con código legacy.
+     * El portafolio ahora se gestiona en la tabla 'proyectos_portafolio'.
+     * Usar: ProyectosPortafolioServlet y su DAO correspondiente.
+     * IMPORTANTE: Este campo será ELIMINADO en la versión 3.0
      */
     @Deprecated
     private List<String> portafolio;
@@ -89,17 +140,31 @@ public class Profesional {
     private boolean activo;
 
     /**
-     * Información del usuario (para joins con tabla usuarios)
-     * @deprecated Estos campos ya no se gestionan en el formulario profesional.html (eliminado 2025-11-16)
+     * @deprecated CAMPO OBSOLETO - Mantener solo para compatibilidad con búsquedas públicas.
+     * Información del usuario (para joins con tabla usuarios).
+     * Ya NO se gestiona en el formulario profesional.html (eliminado 2025-11-16).
+     * Los datos del usuario se manejan en la tabla 'usuarios', no aquí.
+     * Usar: UsuarioPersonaDAO para obtener información del usuario.
+     * IMPORTANTE: Este campo será ELIMINADO en la versión 3.0
      */
     @Deprecated
     private String nombreCompleto;
 
-    /** @deprecated No se gestiona en formulario profesional.html */
+    /**
+     * @deprecated CAMPO OBSOLETO - Mantener solo para compatibilidad con búsquedas públicas.
+     * Ya NO se gestiona en formulario profesional.html.
+     * Los datos del usuario se manejan en la tabla 'usuarios', no aquí.
+     * IMPORTANTE: Este campo será ELIMINADO en la versión 3.0
+     */
     @Deprecated
     private String email;
 
-    /** @deprecated No se gestiona en formulario profesional.html */
+    /**
+     * @deprecated CAMPO OBSOLETO - Mantener solo para compatibilidad con búsquedas públicas.
+     * Ya NO se gestiona en formulario profesional.html.
+     * Los datos del usuario se manejan en la tabla 'usuarios', no aquí.
+     * IMPORTANTE: Este campo será ELIMINADO en la versión 3.0
+     */
     @Deprecated
     private String telefono;
 
@@ -137,6 +202,14 @@ public class Profesional {
         this.usuarioId = usuarioId;
     }
 
+    public Integer getEspecialidadId() {
+        return especialidadId;
+    }
+
+    public void setEspecialidadId(Integer especialidadId) {
+        this.especialidadId = especialidadId;
+    }
+
     public String getEspecialidad() {
         return especialidad;
     }
@@ -151,6 +224,14 @@ public class Profesional {
 
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion;
+    }
+
+    public String getBiografiaProfesional() {
+        return biografiaProfesional;
+    }
+
+    public void setBiografiaProfesional(String biografiaProfesional) {
+        this.biografiaProfesional = biografiaProfesional;
     }
 
     public String getExperiencia() {

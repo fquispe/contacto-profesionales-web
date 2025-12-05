@@ -244,11 +244,74 @@ public class LoginServlet extends HttpServlet {
         } else {
             logger.warn("Usuario {} no tiene usuarioPersonaId asociado", usuario.getId());
         }
-        
-        // TODO: Obtener IDs de cliente y profesional si existen
-        // Esto requeriría consultas adicionales a las tablas clientes y profesionales
-        
+
+        // ✅ IMPLEMENTADO 2025-12-04: Obtener IDs de cliente y profesional si existen
+        obtenerIdsRoles(usuario.getId(), dto);
+
         return dto;
+    }
+
+    /**
+     * ✅ NUEVO 2025-12-04: Obtiene los IDs de cliente y profesional desde las tablas correspondientes.
+     * Este método consulta las tablas clientes y profesionales para obtener los IDs
+     * basándose en el usuario_id.
+     *
+     * @param usuarioId ID del usuario en la tabla usuarios
+     * @param dto DTO donde se guardarán los IDs encontrados
+     */
+    private void obtenerIdsRoles(Integer usuarioId, UsuarioDTO dto) {
+        java.sql.Connection conn = null;
+        java.sql.PreparedStatement psCliente = null;
+        java.sql.PreparedStatement psProfesional = null;
+        java.sql.ResultSet rsCliente = null;
+        java.sql.ResultSet rsProfesional = null;
+
+        try {
+            conn = com.contactoprofesionales.util.DatabaseConnection.getConnection();
+
+            // ✅ Obtener clienteId si existe
+            String sqlCliente = "SELECT id FROM clientes WHERE usuario_id = ? AND activo = true";
+            psCliente = conn.prepareStatement(sqlCliente);
+            psCliente.setInt(1, usuarioId);
+            rsCliente = psCliente.executeQuery();
+
+            if (rsCliente.next()) {
+                Long clienteId = rsCliente.getLong("id");
+                dto.setClienteId(clienteId);
+                logger.debug("✓ ClienteId encontrado: {} para usuarioId: {}", clienteId, usuarioId);
+            } else {
+                logger.debug("No se encontró clienteId para usuarioId: {}", usuarioId);
+            }
+
+            // ✅ Obtener profesionalId si existe
+            String sqlProfesional = "SELECT id FROM profesionales WHERE usuario_id = ? AND activo = true";
+            psProfesional = conn.prepareStatement(sqlProfesional);
+            psProfesional.setInt(1, usuarioId);
+            rsProfesional = psProfesional.executeQuery();
+
+            if (rsProfesional.next()) {
+                Integer profesionalId = rsProfesional.getInt("id");
+                dto.setProfesionalId(profesionalId);
+                logger.info("✓ ProfesionalId encontrado: {} para usuarioId: {}", profesionalId, usuarioId);
+            } else {
+                logger.debug("No se encontró profesionalId para usuarioId: {}", usuarioId);
+            }
+
+        } catch (Exception e) {
+            logger.error("Error al obtener IDs de roles para usuarioId: {}", usuarioId, e);
+            // No lanzamos excepción para no interrumpir el login si falla esta consulta
+        } finally {
+            // Cerrar recursos
+            try {
+                if (rsCliente != null) rsCliente.close();
+                if (rsProfesional != null) rsProfesional.close();
+                if (psCliente != null) psCliente.close();
+                if (psProfesional != null) psProfesional.close();
+                if (conn != null) conn.close();
+            } catch (Exception e) {
+                logger.error("Error al cerrar recursos de BD", e);
+            }
+        }
     }
 
     /**

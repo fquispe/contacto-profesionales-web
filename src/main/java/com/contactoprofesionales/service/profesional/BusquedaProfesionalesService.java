@@ -33,65 +33,53 @@ public class BusquedaProfesionalesService {
     
     /**
      * Busca profesionales según los criterios especificados.
-     * 
+     * ACTUALIZADO: Soporte para categoriaId y especialidadTexto
+     *
      * @param criterios Criterios de búsqueda
      * @return Lista de profesionales que cumplen los criterios
      * @throws DatabaseException Si ocurre un error en la base de datos
      */
-    public List<ProfesionalBusquedaDTO> buscarProfesionales(BusquedaCriteriosDTO criterios) 
+    public List<ProfesionalBusquedaDTO> buscarProfesionales(BusquedaCriteriosDTO criterios)
             throws DatabaseException {
-        
+
         logger.info("Iniciando búsqueda de profesionales con criterios: {}", criterios);
-        
+
         // Validar criterios
         validarCriterios(criterios);
-        
+
         List<Profesional> profesionales;
-        
+
         try {
             // Determinar el método de búsqueda según los criterios
             if (!criterios.tieneAlgunFiltro()) {
                 // Sin filtros: listar todos
                 logger.debug("Búsqueda sin filtros - listando todos los profesionales");
                 profesionales = profesionalDAO.listarTodos();
-                
-            } else if (criterios.getEspecialidad() != null && 
-                      criterios.getDistrito() == null && 
-                      criterios.getCalificacionMinima() == null) {
-                // Solo especialidad
-                logger.debug("Búsqueda solo por especialidad: {}", criterios.getEspecialidad());
-                profesionales = profesionalDAO.buscarPorEspecialidad(criterios.getEspecialidad());
-                
-            } else if (criterios.getDistrito() != null && 
-                      criterios.getEspecialidad() == null && 
-                      criterios.getCalificacionMinima() == null) {
-                // Solo distrito
-                logger.debug("Búsqueda solo por distrito: {}", criterios.getDistrito());
-                profesionales = profesionalDAO.buscarPorDistrito(criterios.getDistrito());
-                
+
             } else {
-                // Búsqueda con filtros combinados
-                logger.debug("Búsqueda con filtros combinados");
+                // Búsqueda con filtros (nuevo método actualizado)
+                logger.debug("Búsqueda con filtros: categoriaId={}, especialidad={}, especialidadTexto={}",
+                           criterios.getCategoriaId(), criterios.getEspecialidad(), criterios.getEspecialidadTexto());
                 profesionales = profesionalDAO.buscarConFiltros(
                     criterios.getEspecialidad(),
-                    criterios.getDistrito(),
-                    criterios.getCalificacionMinima()
+                    null, // distrito ya no se usa
+                    null  // calificacionMin ya no se usa
                 );
             }
-            
+
             // Aplicar filtros adicionales en memoria (que no están en el DAO)
             profesionales = aplicarFiltrosAdicionales(profesionales, criterios);
-            
+
             // Convertir a DTOs optimizados para búsqueda
             List<ProfesionalBusquedaDTO> resultados = convertirADTOsBusqueda(profesionales);
-            
+
             // Aplicar paginación
             resultados = aplicarPaginacion(resultados, criterios);
-            
+
             logger.info("Búsqueda completada. Encontrados {} profesionales", resultados.size());
-            
+
             return resultados;
-            
+
         } catch (DatabaseException e) {
             logger.error("Error al buscar profesionales: {}", e.getMessage(), e);
             throw e;
@@ -100,24 +88,25 @@ public class BusquedaProfesionalesService {
     
     /**
      * Obtiene el total de profesionales que coinciden con los criterios (sin paginación).
+     * ACTUALIZADO: Ya no usa distrito ni calificacionMinima
      */
     public int contarResultados(BusquedaCriteriosDTO criterios) throws DatabaseException {
         logger.debug("Contando resultados para criterios: {}", criterios);
-        
+
         List<Profesional> profesionales;
-        
+
         if (!criterios.tieneAlgunFiltro()) {
             profesionales = profesionalDAO.listarTodos();
         } else {
             profesionales = profesionalDAO.buscarConFiltros(
                 criterios.getEspecialidad(),
-                criterios.getDistrito(),
-                criterios.getCalificacionMinima()
+                null, // distrito ya no se usa
+                null  // calificacionMinima ya no se usa
             );
         }
-        
+
         profesionales = aplicarFiltrosAdicionales(profesionales, criterios);
-        
+
         return profesionales.size();
     }
     
@@ -155,34 +144,37 @@ public class BusquedaProfesionalesService {
     
     /**
      * Valida los criterios de búsqueda.
+     * ACTUALIZADO: Validación de calificación mínima comentada (ya no se usa)
      */
     private void validarCriterios(BusquedaCriteriosDTO criterios) {
         if (criterios == null) {
             throw new IllegalArgumentException("Los criterios de búsqueda no pueden ser nulos");
         }
-        
-        // Validar calificación mínima
+
+        // COMENTADO: Validar calificación mínima (ya no se usa)
+        /*
         if (criterios.getCalificacionMinima() != null) {
             double cal = criterios.getCalificacionMinima();
             if (cal < 0 || cal > 5) {
                 throw new IllegalArgumentException("La calificación mínima debe estar entre 0 y 5");
             }
         }
-        
+        */
+
         // Validar tarifa máxima
         if (criterios.getTarifaMaxima() != null && criterios.getTarifaMaxima() < 0) {
             throw new IllegalArgumentException("La tarifa máxima no puede ser negativa");
         }
-        
+
         // Validar paginación
         if (criterios.getPagina() < 1) {
             throw new IllegalArgumentException("El número de página debe ser mayor a 0");
         }
-        
+
         if (criterios.getElementosPorPagina() < 1 || criterios.getElementosPorPagina() > 50) {
             throw new IllegalArgumentException("Los elementos por página deben estar entre 1 y 50");
         }
-        
+
         logger.debug("Criterios validados correctamente");
     }
     
@@ -225,24 +217,32 @@ public class BusquedaProfesionalesService {
     
     /**
      * Convierte un Profesional a un DTO de búsqueda.
+     * ACTUALIZADO: Usa biografia_profesional en vez de descripcion
      */
     private ProfesionalBusquedaDTO convertirAProfesionalBusquedaDTO(Profesional profesional) {
         ProfesionalBusquedaDTO dto = new ProfesionalBusquedaDTO();
-        
+
         dto.setId(profesional.getId());
         dto.setNombreCompleto(profesional.getNombreCompleto());
+        dto.setEspecialidadId(profesional.getEspecialidadId());
         dto.setEspecialidad(profesional.getEspecialidad());
-        
-        // Descripción corta (primeros 150 caracteres)
-        String descripcion = profesional.getDescripcion();
+
+        // CAMBIO IMPORTANTE: Usar biografia_profesional en lugar de descripcion
+        // El campo biografiaProfesional debe estar disponible en el modelo Profesional
+        String descripcion = profesional.getBiografiaProfesional();
+        // Fallback a descripcion si biografia no está disponible
+        if (descripcion == null || descripcion.isEmpty()) {
+            descripcion = profesional.getDescripcion();
+        }
+
         if (descripcion != null && descripcion.length() > MAX_DESCRIPCION_CORTA) {
             dto.setDescripcionCorta(descripcion.substring(0, MAX_DESCRIPCION_CORTA) + "...");
         } else {
             dto.setDescripcionCorta(descripcion);
         }
-        
+
         dto.setExperiencia(profesional.getExperiencia());
-        
+
         // Habilidades destacadas (máximo 5)
         if (profesional.getHabilidades() != null && !profesional.getHabilidades().isEmpty()) {
             List<String> habilidadesDestacadas = profesional.getHabilidades().stream()
@@ -250,7 +250,7 @@ public class BusquedaProfesionalesService {
                     .collect(Collectors.toList());
             dto.setHabilidadesDestacadas(habilidadesDestacadas);
         }
-        
+
         dto.setFotoPerfil(profesional.getFotoPerfil());
         dto.setTarifaHora(profesional.getTarifaHora());
         dto.setCalificacionPromedio(profesional.getCalificacionPromedio());
@@ -260,7 +260,7 @@ public class BusquedaProfesionalesService {
         dto.setDisponible(profesional.isDisponible());
         dto.setVerificado(profesional.isVerificado());
         dto.setTelefono(profesional.getTelefono());
-        
+
         return dto;
     }
     

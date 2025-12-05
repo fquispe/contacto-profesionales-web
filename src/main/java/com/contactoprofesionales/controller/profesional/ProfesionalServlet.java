@@ -54,12 +54,14 @@ import java.util.Map;
  * - nombreCompleto, email, telefono: Mantenidos para búsqueda pública
  * - habilidades, certificaciones, portafolio: Mantenidos para compatibilidad
  *
- * Endpoints:
+ * Endpoints DISPONIBLES (solo lectura):
  * - GET /api/profesionales                -> Listar profesionales (con filtros opcionales)
  * - GET /api/profesionales/{id}           -> Obtener profesional específico
  * - GET /api/profesionales?usuarioId={id} -> Obtener profesional por usuarioId
- * - POST /api/profesionales               -> Crear profesional (DEPRECADO - usar registro completo)
- * - PUT /api/profesionales/{id}           -> Actualizar profesional (DEPRECADO - usar servlets específicos)
+ *
+ * ❌ Endpoints ELIMINADOS (2025-12-03):
+ * - POST /api/profesionales               -> ELIMINADO (usar POST /api/auth/registro)
+ * - PUT /api/profesionales/{id}           -> ELIMINADO (usar servlets específicos de perfil)
  */
 @WebServlet(name = "ProfesionalServlet", urlPatterns = {
     "/api/profesionales",
@@ -180,194 +182,38 @@ public class ProfesionalServlet extends HttpServlet {
             handleInternalError(response, e, startTime);
         }
     }
-    
-    
-    /**
-     * POST - Crear profesional.
-     *
-     * ⚠️ DEPRECADO - ACTUALIZADO 2025-11-16:
-     * Este método está deprecado para la creación de perfiles profesionales.
-     * Se mantiene solo para compatibilidad con código legacy.
-     *
-     * USAR EN SU LUGAR:
-     * - Flujo de registro completo que crea usuario y profesional en una transacción
-     * - PerfilProfesionalServlet para actualizar datos básicos
-     *
-     * @deprecated Usar flujo de registro completo
-     */
-    @Deprecated
-    @Override
-    protected void doPost(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
 
-        long startTime = System.currentTimeMillis();
-        logger.warn("⚠️ POST /api/profesionales - Método DEPRECADO");
-        
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        
-        try {
-            // Leer body del request
-            StringBuilder buffer = new StringBuilder();
-            BufferedReader reader = request.getReader();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                buffer.append(line);
-            }
-            String requestBody = buffer.toString();
-            
-            logger.info("Body recibido: {}", requestBody);
-            
-            // Parsear JSON a Profesional
-            Profesional profesional = gson.fromJson(requestBody, Profesional.class);
-            
-            if (profesional == null) {
-                sendBadRequest(response, "Datos inválidos");
-                return;
-            }
-            
-            logger.info("Profesional parseado: {}", profesional);
-            
-            // Crear profesional
-            Profesional nuevoProfesional = profesionalService.crearProfesional(profesional);
-            
-            Map<String, Object> responseData = new HashMap<>();
-            responseData.put("profesional", nuevoProfesional);
-            responseData.put("mensaje", "Perfil profesional creado exitosamente");
-            
-            JsonResponse jsonResponse = JsonResponse.success(responseData);
-            
-            response.setStatus(HttpServletResponse.SC_CREATED);
-            response.getWriter().write(gson.toJson(jsonResponse));
-            
-            long duration = System.currentTimeMillis() - startTime;
-            logger.info("✓ Profesional creado - ID: {} - Tiempo: {}ms", 
-                       nuevoProfesional.getId(), duration);
-            
-        } catch (ValidationException e) {
-            handleValidationError(response, e, startTime);
-            
-        } catch (ProfesionalException e) {
-            handleProfesionalError(response, e, startTime);
-            
-        } catch (DatabaseException e) {
-            handleDatabaseError(response, e, startTime);
-            
-        } catch (Exception e) {
-            handleInternalError(response, e, startTime);
-        }
-    }
-    
     /**
-     * PUT - Actualizar profesional.
+     * ═══════════════════════════════════════════════════════════════════════════════
+     * MÉTODOS POST Y PUT ELIMINADOS - 2025-12-03
+     * ═══════════════════════════════════════════════════════════════════════════════
      *
-     * ⚠️ DEPRECADO - ACTUALIZADO 2025-11-16:
-     * Este método está deprecado para la actualización de perfiles profesionales.
-     * Se mantiene solo para compatibilidad con código legacy.
+     * Los métodos doPost() y doPut() han sido ELIMINADOS como parte de la refactorización.
      *
-     * USAR EN SU LUGAR:
-     * - PerfilProfesionalServlet (PUT /api/profesional/perfil): Para datos básicos
-     * - CertificacionesProfesionalServlet: Para certificaciones
-     * - ProyectosPortafolioServlet: Para proyectos
-     * - AntecedentesProfesionalServlet: Para antecedentes
-     * - RedesSocialesProfesionalServlet: Para redes sociales
+     * ❌ ENDPOINTS DEPRECADOS (YA NO DISPONIBLES):
+     * - POST /api/profesionales          → Crear profesional
+     * - PUT /api/profesionales/{id}      → Actualizar profesional
      *
-     * FORMULARIO WEB:
-     * - profesional-refactorizado.html NO usa este endpoint
-     * - Usa los servlets específicos mencionados arriba
+     * ✅ USAR EN SU LUGAR:
      *
-     * @deprecated Usar servlets específicos por sección del perfil
+     * 1. PARA CREAR UN PROFESIONAL:
+     *    - POST /api/auth/registro  (AutenticacionServlet)
+     *      Crea usuario y profesional en una transacción
+     *
+     * 2. PARA ACTUALIZAR PERFIL PROFESIONAL:
+     *    - PUT /api/profesional/perfil          (PerfilProfesionalServlet)
+     *    - POST/PUT /api/profesional/certificaciones  (CertificacionesProfesionalServlet)
+     *    - POST/PUT /api/profesional/proyectos        (ProyectosPortafolioServlet)
+     *    - POST/PUT /api/profesional/antecedentes     (AntecedentesProfesionalServlet)
+     *    - POST/PUT /api/profesional/redes-sociales   (RedesSocialesProfesionalServlet)
+     *
+     * Este servlet ahora SOLO soporta operaciones de LECTURA (GET):
+     * - GET /api/profesionales              → Listar profesionales
+     * - GET /api/profesionales/{id}         → Obtener profesional específico
+     * - GET /api/profesionales?usuarioId={id} → Obtener profesional por usuario
+     *
+     * ═══════════════════════════════════════════════════════════════════════════════
      */
-    @Deprecated
-    @Override
-    protected void doPut(HttpServletRequest request, HttpServletResponse response)
-            throws ServletException, IOException {
-
-        long startTime = System.currentTimeMillis();
-        logger.warn("⚠️ PUT /api/profesionales - Método DEPRECADO");
-        
-        response.setContentType("application/json");
-        response.setCharacterEncoding("UTF-8");
-        
-        try {
-            String pathInfo = request.getPathInfo();
-            
-            if (pathInfo == null || pathInfo.equals("/")) {
-                sendBadRequest(response, "ID de profesional requerido");
-                return;
-            }
-            
-            String[] splits = pathInfo.split("/");
-            if (splits.length < 2) {
-                sendBadRequest(response, "ID de profesional inválido");
-                return;
-            }
-            
-            Integer profesionalId = Integer.parseInt(splits[1]);
-            
-            // Leer body del request
-            StringBuilder buffer = new StringBuilder();
-            BufferedReader reader = request.getReader();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                buffer.append(line);
-            }
-            String requestBody = buffer.toString();
-            
-            logger.info("Body recibido para actualización: {}", requestBody);
-            
-            // Parsear JSON a Profesional
-            Profesional profesional = gson.fromJson(requestBody, Profesional.class);
-            
-            if (profesional == null) {
-                sendBadRequest(response, "Datos inválidos");
-                return;
-            }
-            
-            // Asignar el ID del path
-            profesional.setId(profesionalId);
-            
-            logger.info("Actualizando profesional ID: {}", profesionalId);
-            
-            // Actualizar profesional
-            boolean actualizado = profesionalService.actualizarProfesional(profesional);
-            
-            if (actualizado) {
-                // Obtener el profesional actualizado
-                Profesional profesionalActualizado = profesionalService.obtenerProfesional(profesionalId);
-                
-                Map<String, Object> responseData = new HashMap<>();
-                responseData.put("profesional", profesionalActualizado);
-                responseData.put("mensaje", "Perfil profesional actualizado exitosamente");
-                
-                JsonResponse jsonResponse = JsonResponse.success(responseData);
-                
-                response.setStatus(HttpServletResponse.SC_OK);
-                response.getWriter().write(gson.toJson(jsonResponse));
-                
-                long duration = System.currentTimeMillis() - startTime;
-                logger.info("✓ Profesional actualizado - ID: {} - Tiempo: {}ms", 
-                           profesionalId, duration);
-            } else {
-                throw new ProfesionalException("No se pudo actualizar el profesional");
-            }
-            
-        } catch (NumberFormatException e) {
-            sendBadRequest(response, "ID de profesional inválido");
-            
-        } catch (ValidationException e) {
-            handleValidationError(response, e, startTime);
-            
-        } catch (ProfesionalException e) {
-            handleProfesionalError(response, e, startTime);
-            
-        } catch (DatabaseException e) {
-            handleDatabaseError(response, e, startTime);
-            
-        } catch (Exception e) {
-            handleInternalError(response, e, startTime);
-        }
-    }
     
     private void obtenerProfesionalPorUsuario(Integer usuarioId, HttpServletResponse response) 
             throws Exception {

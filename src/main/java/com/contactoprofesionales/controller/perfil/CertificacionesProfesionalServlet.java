@@ -308,20 +308,37 @@ public class CertificacionesProfesionalServlet extends HttpServlet {
      * @param request Request HTTP
      * @return ID del profesional o null si no está autenticado
      */
+    /**
+     * ✅ ACTUALIZADO 2025-12-04: Obtiene el ID del profesional desde query parameter (localStorage).
+     *
+     * @param request Request HTTP
+     * @return ID del profesional o null si no está presente
+     */
     private Integer obtenerProfesionalIdDeToken(HttpServletRequest request) {
-        // ✅ TODO: Implementar extracción real del token JWT
-        // Por ahora retornamos un ID de prueba
-        // En producción, extraer del header Authorization: Bearer <token>
-        // y decodificar el JWT para obtener el profesionalId
+        // ✅ Intentar obtener desde query parameter primero (localStorage)
+        String profesionalIdParam = request.getParameter("profesionalId");
 
-        String authHeader = request.getHeader("Authorization");
-        if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            // String token = authHeader.substring(7);
-            // return jwtService.extractProfesionalId(token);
-            // Por ahora retornamos ID de prueba
-            return 1;
+        if (profesionalIdParam != null && !profesionalIdParam.trim().isEmpty()) {
+            try {
+                Integer profesionalId = Integer.parseInt(profesionalIdParam);
+                logger.debug("ProfesionalId obtenido desde query parameter: {}", profesionalId);
+                return profesionalId;
+            } catch (NumberFormatException e) {
+                logger.warn("profesionalId inválido en query parameter: {}", profesionalIdParam);
+            }
         }
 
+        // Fallback: intentar obtener desde sesión HTTP (para compatibilidad)
+        jakarta.servlet.http.HttpSession session = request.getSession(false);
+        if (session != null) {
+            Integer profesionalId = (Integer) session.getAttribute("profesionalId");
+            if (profesionalId != null) {
+                logger.debug("ProfesionalId obtenido desde sesión HTTP: {}", profesionalId);
+                return profesionalId;
+            }
+        }
+
+        logger.warn("No se pudo obtener profesionalId");
         return null;
     }
 

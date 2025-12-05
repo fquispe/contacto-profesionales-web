@@ -17,6 +17,7 @@ public class ProfesionalBusquedaDTO implements Serializable {
     private String nombreCompleto;
     
     // Información profesional
+    private Integer especialidadId; // ID de la especialidad seleccionada
     private String especialidad;
     private String descripcionCorta; // Primeros 150 caracteres
     private String experiencia;
@@ -89,14 +90,22 @@ public class ProfesionalBusquedaDTO implements Serializable {
         this.nombreCompleto = nombreCompleto;
     }
     
+    public Integer getEspecialidadId() {
+        return especialidadId;
+    }
+
+    public void setEspecialidadId(Integer especialidadId) {
+        this.especialidadId = especialidadId;
+    }
+
     public String getEspecialidad() {
         return especialidad;
     }
-    
+
     public void setEspecialidad(String especialidad) {
         this.especialidad = especialidad;
     }
-    
+
     public String getDescripcionCorta() {
         return descripcionCorta;
     }

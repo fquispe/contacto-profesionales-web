@@ -564,29 +564,28 @@ public class AutenticacionServiceImpl implements AutenticacionService {
             throws SQLException {
 
         String sql = "INSERT INTO profesionales (usuario_id, descripcion, " +
-                     "radio_servicio, disponibilidad, verificado, disponible, " +
+                     "disponibilidad, verificado, disponible, " +
                      "fecha_registro, ultima_actualizacion, activo, " +
                      "verificacion_identidad, certificado_antecedentes, total_resenas, " +
                      "calificacion_promedio, anios_experiencia) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) RETURNING id";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             Timestamp ahora = Timestamp.valueOf(LocalDateTime.now());
 
             stmt.setInt(1, userId);                                          // usuario_id
             stmt.setString(2, "Perfil profesional en construcción");        // descripcion
-            stmt.setInt(3, 10);                                              // radio_servicio (10 km por defecto)
-            stmt.setString(4, "Por definir");                                // disponibilidad
-            stmt.setBoolean(5, false);                                       // verificado
-            stmt.setBoolean(6, true);                                        // disponible
-            stmt.setTimestamp(7, ahora);                                     // fecha_registro
-            stmt.setTimestamp(8, ahora);                                     // ultima_actualizacion
-            stmt.setBoolean(9, true);                                        // activo
-            stmt.setBoolean(10, false);                                      // verificacion_identidad
-            stmt.setBoolean(11, false);                                      // certificado_antecedentes
-            stmt.setInt(12, 0);                                              // total_resenas
-            stmt.setBigDecimal(13, new java.math.BigDecimal("0.0"));        // calificacion_promedio
-            stmt.setInt(14, 0);                                              // anios_experiencia
+            stmt.setString(3, "Por definir");                                // disponibilidad
+            stmt.setBoolean(4, false);                                       // verificado
+            stmt.setBoolean(5, true);                                        // disponible
+            stmt.setTimestamp(6, ahora);                                     // fecha_registro
+            stmt.setTimestamp(7, ahora);                                     // ultima_actualizacion
+            stmt.setBoolean(8, true);                                        // activo
+            stmt.setBoolean(9, false);                                      // verificacion_identidad
+            stmt.setBoolean(10, false);                                      // certificado_antecedentes
+            stmt.setInt(11, 0);                                              // total_resenas
+            stmt.setBigDecimal(12, new java.math.BigDecimal("0.0"));        // calificacion_promedio
+            stmt.setInt(13, 0);                                              // anios_experiencia
 
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {

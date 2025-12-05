@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Detalle del Trabajo - ServiciosPro</title>
+  <link rel="stylesheet" href="assets/css/detalle-trabajo.css">
+</head>
+<body>
+  <!-- Header -->
+  <header class="header">
+    <div class="header-left">
+      <button class="btn-back" onclick="volverADashboard()">
+        ← Volver a Mis Trabajos
+      </button>
+    </div>
+    <div class="header-title">
+      <h1>Detalle del Trabajo</h1>
+    </div>
+    <div class="header-right">
+      <span class="user-name" id="userName">Usuario</span>
+      <button class="logout-btn" onclick="logout()">Cerrar Sesión</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <!-- Loading State -->
+    <div id="loadingState" class="loading-state">
+      <div class="spinner"></div>
+      <p>Cargando información del trabajo...</p>
+    </div>
+
+    <!-- Error State -->
+    <div id="errorState" class="error-state" style="display: none;">
+      <div class="error-icon">⚠️</div>
+      <div class="error-text">
+        <h3>Error al cargar el trabajo</h3>
+        <p id="errorMessage">No se pudo cargar la información</p>
+      </div>
+      <button class="btn-primary" onclick="location.reload()">Reintentar</button>
+    </div>
+
+    <!-- Content Container -->
+    <div id="contentContainer" style="display: none;">
+      <!-- Solicitud Info Card -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title-section">
+            <h2>Información de la Solicitud</h2>
+            <span class="codigo-solicitud" id="codigoSolicitud">SR-2025-000000</span>
+          </div>
+          <div id="estadoActual" class="estado-badge"></div>
+        </div>
+
+        <div class="card-body">
+          <!-- Información del Cliente -->
+          <div class="info-section cliente-section">
+            <label class="info-label">📋 Información del Cliente</label>
+            <div class="cliente-details">
+              <div class="cliente-item">
+                <strong>Nombre:</strong> <span id="clienteNombre">-</span>
+              </div>
+              <div class="cliente-item">
+                <strong>Email:</strong> <span id="clienteEmail">-</span>
+              </div>
+              <div class="cliente-item">
+                <strong>Teléfono:</strong> <span id="clienteTelefono">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="info-grid">
+            <!-- Fecha Solicitud -->
+            <div class="info-item">
+              <label class="info-label">Fecha de Solicitud</label>
+              <div class="info-value" id="fechaSolicitud">-</div>
+            </div>
+
+            <!-- Fecha Servicio -->
+            <div class="info-item">
+              <label class="info-label">Fecha del Servicio</label>
+              <div class="info-value" id="fechaServicio">-</div>
+            </div>
+
+            <!-- Urgencia -->
+            <div class="info-item">
+              <label class="info-label">Urgencia</label>
+              <div class="info-value" id="urgencia">-</div>
+            </div>
+
+            <!-- Presupuesto -->
+            <div class="info-item">
+              <label class="info-label">Presupuesto Estimado</label>
+              <div class="info-value" id="presupuesto">-</div>
+            </div>
+
+            <!-- Tipo Prestación -->
+            <div class="info-item">
+              <label class="info-label">Modalidad</label>
+              <div class="info-value" id="modalidad">-</div>
+            </div>
+          </div>
+
+          <!-- Descripción (full width) -->
+          <div class="info-section">
+            <label class="info-label">Descripción del Servicio</label>
+            <div class="info-value descripcion-texto" id="descripcion">-</div>
+          </div>
+
+          <!-- Ubicación -->
+          <div id="ubicacionSection" class="info-section" style="display: none;">
+            <label class="info-label">📍 Ubicación del Servicio</label>
+            <div class="ubicacion-details">
+              <div class="ubicacion-item">
+                <strong>Departamento:</strong> <span id="departamentoNombre">-</span>
+              </div>
+              <div class="ubicacion-item">
+                <strong>Provincia:</strong> <span id="provinciaNombre">-</span>
+              </div>
+              <div class="ubicacion-item">
+                <strong>Distrito:</strong> <span id="distritoNombre">-</span>
+              </div>
+              <div class="ubicacion-item">
+                <strong>Dirección:</strong> <span id="direccion">-</span>
+              </div>
+              <div class="ubicacion-item">
+                <strong>Referencia:</strong> <span id="referencia">-</span>
+              </div>
+              <div class="ubicacion-item">
+                <strong>Código Postal:</strong> <span id="codigoPostal">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Imágenes Adjuntas -->
+          <div id="imagenesSection" class="info-section" style="display: none;">
+            <label class="info-label">📷 Imágenes Adjuntas</label>
+            <div class="imagenes-grid" id="imagenesGrid">
+              <!-- Las imágenes se cargarán dinámicamente aquí -->
+            </div>
+          </div>
+
+          <!-- Notas Adicionales -->
+          <div id="notasSection" class="info-section" style="display: none;">
+            <label class="info-label">📝 Notas Adicionales</label>
+            <div class="info-value" id="notasAdicionales">-</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Acciones Card (solo visible para estados permitidos) -->
+      <div id="accionesCard" class="card">
+        <div class="card-header">
+          <h2>Gestionar Solicitud</h2>
+        </div>
+        <div class="card-body">
+          <div class="acciones-info">
+            <p class="info-text">
+              Estado actual: <strong><span id="estadoTexto">-</span></strong>
+            </p>
+            <p class="info-text" id="transicionesInfo">
+              Puedes cambiar el estado de esta solicitud:
+            </p>
+          </div>
+
+          <!-- Botones de acción (se generan dinámicamente) -->
+          <div id="botonesAccion" class="acciones-buttons">
+            <!-- Los botones se generarán con JavaScript -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Estado Final Message -->
+      <div id="estadoFinalCard" class="card" style="display: none;">
+        <div class="card-body">
+          <div class="final-state-message">
+            <div class="final-state-icon">ℹ️</div>
+            <p>Esta solicitud está en un estado final y no puede ser modificada.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal de Confirmación -->
+  <div id="confirmModal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="cerrarModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Confirmar Acción</h3>
+        <button class="modal-close" onclick="cerrarModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p id="modalMessage">¿Estás seguro de realizar esta acción?</p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+        <button class="btn-confirm" id="btnConfirmar" onclick="confirmarAccion()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="assets/js/detalle-trabajo.js"></script>
+</body>
+</html>

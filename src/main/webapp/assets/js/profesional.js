@@ -44,6 +44,8 @@ const AppState = {
     metodosPagoSeleccionados: [],
     // ✅ ACTUALIZADO 2025-11-16: Especialidades/Categorías del profesional
     especialidades: [],
+    // ✅ NUEVO 2025-12-04: ID del profesional desde localStorage
+    profesionalId: null,
     editando: {
         certificacion: null,
         proyecto: null,
@@ -57,6 +59,21 @@ const AppState = {
 // ========================================
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('Inicializando perfil profesional...');
+
+    // ✅ NUEVO 2025-12-04: Obtener profesionalId desde localStorage
+    const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+
+    if (!userData.profesionalId) {
+        console.error('❌ No se encontró profesionalId en localStorage');
+        mostrarAlerta('Error: No se pudo identificar el profesional. Por favor inicie sesión nuevamente.', 'error');
+        setTimeout(() => {
+            window.location.href = 'login.html';
+        }, 2000);
+        return;
+    }
+
+    AppState.profesionalId = userData.profesionalId;
+    console.log('✓ ProfesionalId cargado desde localStorage:', AppState.profesionalId);
 
     // Inicializar tabs
     inicializarTabs();
@@ -136,13 +153,14 @@ function inicializarEventListeners() {
 /**
  * Carga el perfil completo del profesional.
  * Incluye todos los datos consolidados.
+ * ✅ ACTUALIZADO 2025-12-04: Usa profesionalId desde AppState (localStorage)
  */
 async function cargarPerfilCompleto() {
     mostrarCargando(true);
 
     try {
-        // Obtener perfil completo desde API
-        const perfil = await PerfilProfesionalAPI.obtenerPerfilCompleto();
+        // ✅ Obtener perfil completo desde API pasando el profesionalId
+        const perfil = await PerfilProfesionalAPI.obtenerPerfilCompleto(AppState.profesionalId);
 
         console.log('Perfil completo cargado:', perfil);
         AppState.perfilCompleto = perfil;
@@ -166,13 +184,11 @@ async function cargarPerfilCompleto() {
         AppState.redesSociales = perfil.redesSociales || [];
         renderizarRedesSociales();
 
-        // ✅ ACTUALIZADO 2025-11-16: Cargar especialidades/categorías para el selector de proyectos
-        console.log('🔍 DIAGNÓSTICO: perfil.id =', perfil.id, '(tipo:', typeof perfil.id, ')');
-        if (perfil.id) {
-            await cargarEspecialidades(perfil.id);
+        // ✅ ACTUALIZADO 2025-12-04: Cargar especialidades usando el profesionalId desde AppState
+        if (AppState.profesionalId) {
+            await cargarEspecialidades(AppState.profesionalId);
         } else {
-            console.error('⚠️ ERROR: perfil.id es undefined/null. No se pueden cargar especialidades.');
-            console.error('Perfil completo:', perfil);
+            console.error('⚠️ ERROR: AppState.profesionalId es undefined/null. No se pueden cargar especialidades.');
         }
 
         mostrarAlerta('Perfil cargado exitosamente', 'success');
@@ -274,8 +290,8 @@ async function guardarDatosBasicos(event) {
 
         console.log('Guardando datos básicos:', datos);
 
-        // Actualizar en el servidor
-        await PerfilProfesionalAPI.actualizarDatosBasicos(datos);
+        // ✅ ACTUALIZADO 2025-12-04: Pasar profesionalId como primer parámetro
+        await PerfilProfesionalAPI.actualizarDatosBasicos(AppState.profesionalId, datos);
 
         mostrarAlerta('Datos básicos actualizados exitosamente', 'success');
 
@@ -419,11 +435,11 @@ async function guardarCertificacion(event) {
         if (AppState.editando.certificacion) {
             // Actualizar existente
             datos.id = AppState.editando.certificacion.id;
-            await PerfilProfesionalAPI.actualizarCertificacion(datos);
+            await PerfilProfesionalAPI.actualizarCertificacion(AppState.profesionalId, datos);
             mostrarAlerta('Certificación actualizada exitosamente', 'success');
         } else {
             // Crear nueva
-            await PerfilProfesionalAPI.crearCertificacion(datos);
+            await PerfilProfesionalAPI.crearCertificacion(AppState.profesionalId, datos);
             mostrarAlerta('Certificación agregada exitosamente', 'success');
         }
 
@@ -455,7 +471,7 @@ async function eliminarCertificacion(id) {
 
     try {
         mostrarCargando(true);
-        await PerfilProfesionalAPI.eliminarCertificacion(id);
+        await PerfilProfesionalAPI.eliminarCertificacion(AppState.profesionalId, id);
         mostrarAlerta('Certificación eliminada exitosamente', 'success');
         await cargarPerfilCompleto();
     } catch (error) {
@@ -757,10 +773,10 @@ async function guardarProyecto(event) {
 
         if (AppState.editando.proyecto) {
             datos.id = AppState.editando.proyecto.id;
-            await PerfilProfesionalAPI.actualizarProyecto(datos);
+            await PerfilProfesionalAPI.actualizarProyecto(AppState.profesionalId, datos);
             mostrarAlerta('Proyecto actualizado exitosamente', 'success');
         } else {
-            await PerfilProfesionalAPI.crearProyecto(datos);
+            await PerfilProfesionalAPI.crearProyecto(AppState.profesionalId, datos);
             mostrarAlerta('Proyecto agregado exitosamente', 'success');
         }
 
@@ -784,7 +800,7 @@ async function eliminarProyecto(id) {
 
     try {
         mostrarCargando(true);
-        await PerfilProfesionalAPI.eliminarProyecto(id);
+        await PerfilProfesionalAPI.eliminarProyecto(AppState.profesionalId, id);
         mostrarAlerta('Proyecto eliminado exitosamente', 'success');
         await cargarPerfilCompleto();
     } catch (error) {
@@ -1059,10 +1075,12 @@ async function guardarRedSocial(event) {
 
         if (AppState.editando.redSocial) {
             datos.id = AppState.editando.redSocial.id;
-            await PerfilProfesionalAPI.actualizarRedSocial(datos);
+            // ✅ ACTUALIZADO 2025-12-04: Pasar profesionalId desde AppState
+            await PerfilProfesionalAPI.actualizarRedSocial(AppState.profesionalId, datos);
             mostrarAlerta('Red social actualizada', 'success');
         } else {
-            await PerfilProfesionalAPI.crearRedSocial(datos);
+            // ✅ ACTUALIZADO 2025-12-04: Pasar profesionalId desde AppState
+            await PerfilProfesionalAPI.crearRedSocial(AppState.profesionalId, datos);
             mostrarAlerta('Red social agregada', 'success');
         }
 
@@ -1085,7 +1103,8 @@ async function eliminarRedSocial(id) {
 
     try {
         mostrarCargando(true);
-        await PerfilProfesionalAPI.eliminarRedSocial(id);
+        // ✅ ACTUALIZADO 2025-12-04: Pasar profesionalId desde AppState
+        await PerfilProfesionalAPI.eliminarRedSocial(AppState.profesionalId, id);
         mostrarAlerta('Red social eliminada', 'success');
         await cargarPerfilCompleto();
     } catch (error) {

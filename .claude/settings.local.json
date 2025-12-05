@@ -6,7 +6,12 @@
       "Bash(dir /B \"E:\\Workspace\\Llankaq\\Monolitico\\contacto-profesionales-web\\src\\main\\resources\\db\\migration\" 2)",
       "Bash(nul)",
       "Bash(findstr:*)",
-      "Bash(psql:*)"
+      "Bash(psql:*)",
+      "Bash(powershell -Command \"Get-Content ''E:\\Workspace\\Llankaq\\Monolitico\\contacto-profesionales-web\\src\\main\\webapp\\login.html'' | Select-Object -Last 10\")",
+      "Bash(powershell -Command \"Get-Content ''E:\\Workspace\\Llankaq\\Monolitico\\contacto-profesionales-web\\src\\main\\webapp\\register.html'' | Select-Object -Last 5\")",
+      "Bash(powershell -Command:*)",
+      "Bash(\"E:\\Workspace\\Llankaq\\Monolitico\\contacto-profesionales-web\\src\\main\\webapp\\assets\\css\\solicitud-servicio.css\")",
+      "Bash(dir /B E:WorkspaceLlankaqMonoliticocontacto-profesionales-websrcmainresourcesdbmigration 2)"
     ],
     "deny": [],
     "ask": []

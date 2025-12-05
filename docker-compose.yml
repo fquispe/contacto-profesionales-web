@@ -1,0 +1,128 @@
+# ============================================
+# Docker Compose para Contacto Profesionales Web
+# Ejecuta la aplicación + PostgreSQL en contenedores
+# ============================================
+
+version: '3.8'
+
+services:
+  # ============================================
+  # POSTGRESQL DATABASE
+  # ============================================
+  postgres:
+    image: postgres:16-alpine
+    container_name: contacto-profesionales-db
+    restart: unless-stopped
+
+    # Puerto expuesto al host
+    ports:
+      - "5432:5432"
+
+    # Variables de entorno
+    environment:
+      POSTGRES_DB: contacto_profesionales_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      TZ: America/Lima
+
+    # Volumen persistente para datos
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./src/main/resources/db/migration:/docker-entrypoint-initdb.d:ro
+
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    # Red personalizada
+    networks:
+      - contacto-profesionales-net
+
+  # ============================================
+  # APPLICATION (TOMCAT)
+  # ============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    image: contacto-profesionales-web:latest
+    container_name: contacto-profesionales-web
+    restart: unless-stopped
+
+    # Depende de PostgreSQL
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    # Puerto expuesto al host
+    ports:
+      - "9091:8080"
+
+    # Variables de entorno
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: contacto_profesionales_db
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      TZ: America/Lima
+
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/ContactoProfesionalesWeb/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 60s
+      retries: 3
+
+    # Red personalizada
+    networks:
+      - contacto-profesionales-net
+
+# ============================================
+# NETWORKS
+# ============================================
+networks:
+  contacto-profesionales-net:
+    driver: bridge
+
+# ============================================
+# VOLUMES
+# ============================================
+volumes:
+  postgres_data:
+    driver: local
+
+# ============================================
+# COMANDOS DE USO:
+# ============================================
+# Iniciar servicios:
+#   docker-compose up -d
+#
+# Ver logs:
+#   docker-compose logs -f
+#   docker-compose logs -f app
+#   docker-compose logs -f postgres
+#
+# Detener servicios:
+#   docker-compose down
+#
+# Detener y eliminar volúmenes:
+#   docker-compose down -v
+#
+# Reconstruir imagen:
+#   docker-compose up -d --build
+#
+# Ver estado de servicios:
+#   docker-compose ps
+#
+# Acceder a la aplicación:
+#   http://localhost:9091/ContactoProfesionalesWeb/
+#
+# Acceder a PostgreSQL:
+#   docker exec -it contacto-profesionales-db psql -U postgres -d contacto_profesionales_db
+# ============================================

@@ -1,174 +1,103 @@
-/**
- * Script principal para la gestión del perfil de cliente
- * Maneja la interfaz, validaciones y comunicación con el backend
- */
+// Perfil Cliente JavaScript - Desacoplado el 2025-11-21
 
-// Variables globales
-let clienteAPI;
-let addressCount = 1;
-const maxAddresses = 3;
-let clienteActual = null;
+const MAX_ADDRESSES = 3;
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+let addressCount = 0;
+let clienteId = null;
+let photoBase64 = null;
 
-// Inicialización cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar API
-    clienteAPI = new ClienteAPI();
-    
-    // Configurar event listeners
-    setupEventListeners();
-    
-    // Cargar datos si hay un ID en la URL
-    const urlParams = new URLSearchParams(window.location.search);
-    const clienteId = urlParams.get('id');
-    
-    if (clienteId) {
-        cargarDatosCliente(clienteId);
+function getContextPath() {
+    const path = window.location.pathname;
+    if (path.includes('.html')) {
+        const parts = path.split('/');
+        parts.pop();
+        return parts.join('/') || '';
     }
-    
-    // Configurar preview de foto
-    setupPhotoPreview();
+    return path.substring(0, path.indexOf('/', 1)) || '';
+}
+
+const BASE_URL = getContextPath() + '/api/clientes';
+
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+    document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('tab-' + tabName).classList.add('active');
+    event.target.classList.add('active');
+}
+
+document.getElementById('photoInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        if (file.size > MAX_IMAGE_SIZE) {
+            showAlert('La imagen no debe superar 5 MB', 'error');
+            return;
+        }
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            photoBase64 = e.target.result;
+            document.getElementById('photoPreview').innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">`;
+        };
+        reader.readAsDataURL(file);
+    }
 });
 
-/**
- * Configura todos los event listeners
- */
-function setupEventListeners() {
-    // Submit del formulario
-    const form = document.getElementById('clientProfileForm');
-    if (form) {
-        form.addEventListener('submit', handleFormSubmit);
-    }
-    
-    // Tabs de navegación
-    const tabButtons = document.querySelectorAll('.tab-button');
-    tabButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            switchTab(this.textContent.toLowerCase().includes('personal') ? 'personal' :
-                     this.textContent.toLowerCase().includes('direcciones') ? 'direcciones' :
-                     this.textContent.toLowerCase().includes('preferencias') ? 'preferencias' :
-                     this.textContent.toLowerCase().includes('notificaciones') ? 'notificaciones' : 'privacidad');
-        });
-    });
-    
-    // Validación en tiempo real
-    const nombreCompleto = document.getElementById('nombreCompleto');
-    if (nombreCompleto) {
-        nombreCompleto.addEventListener('blur', function() {
-            validarCampo(this, 'nombreCompleto');
-        });
-    }
-    
-    const email = document.getElementById('email');
-    if (email) {
-        email.addEventListener('blur', function() {
-            validarCampo(this, 'email');
-        });
-    }
-    
-    const telefono = document.getElementById('phone');
-    if (telefono) {
-        telefono.addEventListener('blur', function() {
-            validarCampo(this, 'telefono');
-        });
-    }
+function inicializarDireccionPrincipal() {
+    const container = document.getElementById('addressesContainer');
+    container.innerHTML = `
+        <div class="address-item">
+            <div class="address-type">🏠 Casa (Principal)</div>
+            <div class="form-row two-cols" style="margin-top: 15px;">
+                <div class="form-group">
+                    <label class="form-label">Dirección Completa</label>
+                    <input type="text" class="form-input" name="address[]" placeholder="Av. Principal 123">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Distrito</label>
+                    <select class="form-input" name="district[]">
+                        <option value="">Seleccionar</option>
+                        <option value="miraflores">Miraflores</option>
+                        <option value="san_isidro">San Isidro</option>
+                        <option value="surco">Santiago de Surco</option>
+                        <option value="la_molina">La Molina</option>
+                        <option value="san_borja">San Borja</option>
+                        <option value="surquillo">Surquillo</option>
+                        <option value="barranco">Barranco</option>
+                        <option value="chorrillos">Chorrillos</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Referencias</label>
+                <input type="text" class="form-input" name="reference[]" placeholder="Cerca del parque">
+            </div>
+        </div>
+    `;
+    addressCount = 1;
 }
 
-/**
- * Cambia entre las pestañas del formulario
- */
-function switchTab(tabName) {
-    // Ocultar todos los contenidos
-    const tabContents = document.querySelectorAll('.tab-content');
-    tabContents.forEach(content => {
-        content.classList.remove('active');
-    });
-    
-    // Desactivar todos los botones
-    const tabButtons = document.querySelectorAll('.tab-button');
-    tabButtons.forEach(button => {
-        button.classList.remove('active');
-    });
-    
-    // Activar el tab seleccionado
-    const selectedTab = document.getElementById('tab-' + tabName);
-    if (selectedTab) {
-        selectedTab.classList.add('active');
-    }
-    
-    // Activar el botón correspondiente
-    tabButtons.forEach(button => {
-        const buttonText = button.textContent.toLowerCase();
-        if (buttonText.includes(tabName.toLowerCase())) {
-            button.classList.add('active');
-        }
-    });
-}
-
-/**
- * Configura el preview de la foto de perfil
- */
-function setupPhotoPreview() {
-    const photoInput = document.getElementById('photoInput');
-    if (photoInput) {
-        photoInput.addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file) {
-                // Validar tamaño
-                const maxSize = 5 * 1024 * 1024; // 5MB
-                if (file.size > maxSize) {
-                    showAlert('La imagen no debe superar 5MB', 'error');
-                    photoInput.value = '';
-                    return;
-                }
-                
-                // Validar tipo
-                if (!file.type.startsWith('image/')) {
-                    showAlert('Por favor seleccione un archivo de imagen válido', 'error');
-                    photoInput.value = '';
-                    return;
-                }
-                
-                // Mostrar preview
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const preview = document.getElementById('photoPreview');
-                    preview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
-                };
-                reader.readAsDataURL(file);
-            }
-        });
-    }
-}
-
-/**
- * Agrega una nueva dirección al formulario
- */
 function addAddress() {
-    if (addressCount >= maxAddresses) {
-        showAlert(`Máximo ${maxAddresses} direcciones permitidas`, 'error');
+    if (addressCount >= MAX_ADDRESSES) {
+        showAlert(`Máximo ${MAX_ADDRESSES} direcciones`, 'error');
         return;
     }
-    
     addressCount++;
     const container = document.getElementById('addressesContainer');
-    const addressTypes = ['🏢 Oficina', '🏪 Trabajo', '👥 Otro'];
-    const selectedType = addressTypes[addressCount - 2] || '📍 Dirección ' + addressCount;
-    const tipoValue = addressCount === 1 ? 'PRINCIPAL' : (addressCount === 2 ? 'OFICINA' : (addressCount === 3 ? 'TRABAJO' : 'OTRO'));
-    
+    const types = ['🏢 Oficina', '🏪 Trabajo', '📍 Otra'];
+    const type = types[addressCount - 2] || '📍 Dirección ' + addressCount;
+
     const newAddress = document.createElement('div');
     newAddress.className = 'address-item';
     newAddress.innerHTML = `
-        <div class="address-type">${selectedType}</div>
+        <div class="address-type">${type}</div>
         <div class="form-row two-cols" style="margin-top: 15px;">
             <div class="form-group">
-                <label class="form-label">Dirección Completa *</label>
-                <input type="text" class="form-input" name="direccion[]" 
-                       placeholder="Av. Principal 123, Departamento 4B" required>
+                <label class="form-label">Dirección Completa</label>
+                <input type="text" class="form-input" name="address[]" placeholder="Av. Principal 123">
             </div>
             <div class="form-group">
-                <label class="form-label">Distrito *</label>
-                <select class="form-input" name="distrito[]" required>
-                    <option value="">Seleccionar distrito</option>
+                <label class="form-label">Distrito</label>
+                <select class="form-input" name="district[]">
+                    <option value="">Seleccionar</option>
                     <option value="miraflores">Miraflores</option>
                     <option value="san_isidro">San Isidro</option>
                     <option value="surco">Santiago de Surco</option>
@@ -177,495 +106,460 @@ function addAddress() {
                     <option value="surquillo">Surquillo</option>
                     <option value="barranco">Barranco</option>
                     <option value="chorrillos">Chorrillos</option>
-                    <option value="lince">Lince</option>
-                    <option value="jesus_maria">Jesús María</option>
                 </select>
             </div>
         </div>
         <div class="form-group">
             <label class="form-label">Referencias</label>
-            <input type="text" class="form-input" name="referencia[]" 
-                   placeholder="Cerca del parque, frente a la farmacia">
+            <input type="text" class="form-input" name="reference[]" placeholder="Cerca del parque">
         </div>
-        <input type="hidden" name="tipo[]" value="${tipoValue}">
-        <input type="hidden" name="esPrincipal[]" value="false">
         <button type="button" class="btn-remove" onclick="removeAddress(this)">✕</button>
     `;
-    
     container.appendChild(newAddress);
-    
-    if (addressCount >= maxAddresses) {
+    if (addressCount >= MAX_ADDRESSES) {
         document.getElementById('addAddressBtn').style.display = 'none';
     }
 }
 
-/**
- * Elimina una dirección del formulario
- */
 function removeAddress(button) {
     button.parentElement.remove();
     addressCount--;
     document.getElementById('addAddressBtn').style.display = 'block';
 }
 
-/**
- * Activa/desactiva un toggle switch
- */
 function toggleSwitch(element) {
     element.classList.toggle('active');
 }
 
-/**
- * Actualiza el valor del rango de búsqueda
- */
 function updateRangeValue(slider) {
-    const value = slider.value;
-    document.getElementById('rangeValue').textContent = value + ' km';
+    document.getElementById('rangeValue').textContent = slider.value + ' km';
 }
 
-/**
- * Valida un campo específico
- */
-function validarCampo(campo, tipo) {
-    let isValid = true;
-    let mensaje = '';
-    
-    switch(tipo) {
-        case 'nombreCompleto':
-            if (campo.value.trim().length < 3) {
-                isValid = false;
-                mensaje = 'El nombre debe tener al menos 3 caracteres';
-            } else if (campo.value.trim().length > 100) {
-                isValid = false;
-                mensaje = 'El nombre no puede exceder 100 caracteres';
-            }
-            break;
-            
-        case 'email':
-            const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-            if (!emailRegex.test(campo.value)) {
-                isValid = false;
-                mensaje = 'El formato del email no es válido';
-            }
-            break;
-            
-        case 'telefono':
-            const telefonoRegex = /^[0-9]{9}$/;
-            if (!telefonoRegex.test(campo.value)) {
-                isValid = false;
-                mensaje = 'El teléfono debe tener 9 dígitos';
-            }
-            break;
-    }
-    
-    if (!isValid) {
-        campo.style.borderColor = 'var(--error-color)';
-        showAlert(mensaje, 'error');
-    } else {
-        campo.style.borderColor = 'var(--border-color)';
-    }
-    
-    return isValid;
-}
-
-/**
- * Valida el formulario completo antes de enviar
- */
 function validateForm() {
     let isValid = true;
-    const errores = [];
-    
+    const errors = [];
+
     // Validar campos requeridos
-    const nombreCompleto = document.getElementById('nombreCompleto');
-    if (!nombreCompleto.value.trim()) {
-        errores.push('El nombre completo es obligatorio');
-        nombreCompleto.style.borderColor = 'var(--error-color)';
-        isValid = false;
-    }
-    
-    const email = document.getElementById('email');
-    if (!email.value.trim()) {
-        errores.push('El email es obligatorio');
-        email.style.borderColor = 'var(--error-color)';
-        isValid = false;
-    }
-    
-    const phone = document.getElementById('phone');
-    if (!phone.value.trim()) {
-        errores.push('El teléfono es obligatorio');
-        phone.style.borderColor = 'var(--error-color)';
-        isValid = false;
-    } else if (!/^[0-9]{9}$/.test(phone.value)) {
-        errores.push('El teléfono debe tener 9 dígitos');
-        phone.style.borderColor = 'var(--error-color)';
-        isValid = false;
-    }
-    
-    // Validar direcciones
-    const direcciones = document.querySelectorAll('input[name="direccion[]"]');
-    let addressesProvided = 0;
-    direcciones.forEach(address => {
-        if (address.value.trim()) {
-            addressesProvided++;
+    document.querySelectorAll('[required]').forEach(field => {
+        if (!field.value.trim()) {
+            field.style.borderColor = 'var(--error-color)';
+            errors.push(`El campo "${field.previousElementSibling?.textContent || 'requerido'}" es obligatorio`);
+            isValid = false;
+        } else {
+            field.style.borderColor = 'var(--border-color)';
         }
     });
-    
-    if (addressesProvided > maxAddresses) {
-        errores.push(`Máximo ${maxAddresses} direcciones permitidas`);
+
+    // Validar teléfono
+    const phone = document.getElementById('phone');
+    if (phone.value && !/^[0-9]{9}$/.test(phone.value)) {
+        phone.style.borderColor = 'var(--error-color)';
+        errors.push('El teléfono debe tener exactamente 9 dígitos numéricos');
         isValid = false;
     }
-    
-    // Validar radio de búsqueda
-    const searchRadius = document.getElementById('searchRadius');
-    if (searchRadius && (searchRadius.value < 1 || searchRadius.value > 50)) {
-        errores.push('El radio de búsqueda debe estar entre 1 y 50 km');
+
+    // Validar email
+    const email = document.getElementById('email');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (email.value && !emailRegex.test(email.value)) {
+        email.style.borderColor = 'var(--error-color)';
+        errors.push('El formato del correo electrónico no es válido');
         isValid = false;
     }
-    
-    if (errores.length > 0) {
-        showAlert(errores.join('<br>'), 'error');
+
+    // Validar que haya al menos una dirección
+    const addressInputs = document.querySelectorAll('input[name="address[]"]');
+    let hasValidAddress = false;
+    addressInputs.forEach(addr => {
+        if (addr.value.trim()) hasValidAddress = true;
+    });
+
+    if (!hasValidAddress) {
+        errors.push('Debe proporcionar al menos una dirección');
+        isValid = false;
     }
-    
+
+    if (errors.length > 0) {
+        showAlert('<strong>Errores de validación:</strong><br>' + errors.join('<br>'), 'error');
+    }
+
     return isValid;
 }
 
-/**
- * Recolecta los datos del formulario
- */
 function collectFormData() {
-    // Datos personales
-    const formData = {
-        nombreCompleto: document.getElementById('nombreCompleto').value.trim(),
+    const categorias = Array.from(document.querySelectorAll('input[name="categoria"]:checked'))
+        .map(cb => cb.value);
+
+    const data = {
+        nombreCompleto: document.getElementById('fullName').value.trim(),
         email: document.getElementById('email').value.trim(),
         telefono: document.getElementById('phone').value.trim(),
+        fotoPerfilUrl: photoBase64,
+        categoriasFavoritas: categorias.join(','),
+        radioBusqueda: parseInt(document.getElementById('searchRadius').value),
+        presupuestoPromedio: parseFloat(document.getElementById('averageBudget').value) || null,
+        notificacionesEmail: document.getElementById('emailNotifications').classList.contains('active'),
+        notificacionesPush: document.getElementById('pushNotifications').classList.contains('active'),
+        notificacionesPromociones: document.getElementById('promotionNotifications').classList.contains('active'),
+        notificacionesResenas: document.getElementById('reviewNotifications').classList.contains('active'),
+        perfilVisible: document.getElementById('profileVisible').classList.contains('active'),
+        compartirUbicacion: document.getElementById('shareLocation').classList.contains('active'),
+        historialPublico: document.getElementById('publicHistory').classList.contains('active'),
+        direcciones: []
     };
-    
-    // Categorías favoritas
-    const categorias = [];
-    document.querySelectorAll('input[name="categoria"]:checked').forEach(checkbox => {
-        categorias.push(checkbox.value);
-    });
-    formData.categoriasFavoritas = categorias;
-    
-    // Preferencias de búsqueda
-    formData.radioBusqueda = parseInt(document.getElementById('searchRadius').value);
-    
-    const presupuesto = document.getElementById('presupuestoPromedio').value;
-    formData.presupuestoPromedio = presupuesto ? parseFloat(presupuesto) : null;
-    
-    // Notificaciones
-    formData.notificacionesEmail = document.getElementById('emailNotifications').classList.contains('active');
-    formData.notificacionesPush = document.getElementById('pushNotifications').classList.contains('active');
-    formData.notificacionesPromociones = document.getElementById('promotionNotifications').classList.contains('active');
-    formData.notificacionesResenas = document.getElementById('reviewNotifications').classList.contains('active');
-    
-    // Privacidad
-    formData.perfilVisible = document.getElementById('profileVisible').classList.contains('active');
-    formData.compartirUbicacion = document.getElementById('shareLocation').classList.contains('active');
-    formData.historialPublico = document.getElementById('publicHistory').classList.contains('active');
-    
-    // Direcciones
-    const direcciones = [];
-    const direccionInputs = document.querySelectorAll('input[name="direccion[]"]');
-    const distritoSelects = document.querySelectorAll('select[name="distrito[]"]');
-    const referenciaInputs = document.querySelectorAll('input[name="referencia[]"]');
-    const tipoInputs = document.querySelectorAll('input[name="tipo[]"]');
-    const esPrincipalInputs = document.querySelectorAll('input[name="esPrincipal[]"]');
-    
-    direccionInputs.forEach((input, index) => {
-        if (input.value.trim()) {
-            direcciones.push({
-                tipo: tipoInputs[index]?.value || 'OTRO',
-                direccionCompleta: input.value.trim(),
-                distrito: distritoSelects[index]?.value || '',
-                referencias: referenciaInputs[index]?.value.trim() || null,
-                esPrincipal: esPrincipalInputs[index]?.value === 'true'
+
+    const addressInputs = document.querySelectorAll('input[name="address[]"]');
+    const districtInputs = document.querySelectorAll('select[name="district[]"]');
+    const referenceInputs = document.querySelectorAll('input[name="reference[]"]');
+
+    for (let i = 0; i < addressInputs.length; i++) {
+        if (addressInputs[i].value.trim()) {
+            data.direcciones.push({
+                direccionCompleta: addressInputs[i].value.trim(),
+                distrito: districtInputs[i].value,
+                referencias: referenceInputs[i].value.trim(),
+                tipo: i === 0 ? 'PRINCIPAL' : 'ADICIONAL',
+                esPrincipal: i === 0
             });
         }
-    });
-    
-    formData.direcciones = direcciones;
-    
-    return formData;
+    }
+
+    return data;
 }
 
-/**
- * Maneja el envío del formulario
- */
-async function handleFormSubmit(event) {
-    event.preventDefault();
-    
-    if (!validateForm()) {
-        return;
-    }
-    
-    showLoading(true);
-    showAlert('Guardando configuración...', 'info');
-    
+async function enviarDatos(data) {
+    const url = clienteId ? `${BASE_URL}/${clienteId}` : BASE_URL;
+    const method = clienteId ? 'PUT' : 'POST';
+
+    console.log('=== Enviando datos ===');
+    console.log('URL:', url);
+    console.log('Method:', method);
+    console.log('Data:', JSON.stringify(data, null, 2));
+
     try {
-        const formData = collectFormData();
-        
-        // Validar datos con la API
-        const validacion = clienteAPI.validarDatosCliente(formData);
-        if (!validacion.valid) {
-            throw new Error(validacion.errores.join('. '));
-        }
-        
-        // Procesar foto de perfil si existe
-        const photoInput = document.getElementById('photoInput');
-        if (photoInput && photoInput.files && photoInput.files[0]) {
-            formData.fotoPerfilBase64 = await clienteAPI.convertirImagenABase64(photoInput.files[0]);
-        }
-        
-        let resultado;
-        const clienteId = document.getElementById('clienteId').value;
-        
-        if (clienteId) {
-            // Actualizar cliente existente
-            resultado = await clienteAPI.actualizarCliente(clienteId, formData);
-            showAlert('✅ Perfil actualizado exitosamente', 'success');
+        const response = await fetch(url, {
+            method: method,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
+
+        // Intentar parsear la respuesta
+        let result;
+        const contentType = response.headers.get("content-type");
+
+        if (contentType && contentType.includes("application/json")) {
+            result = await response.json();
+            console.log('Response JSON:', result);
         } else {
-            // Registrar nuevo cliente
-            resultado = await clienteAPI.registrarCliente(formData);
-            showAlert('✅ Cliente registrado exitosamente', 'success');
-            
-            // Guardar ID para futuras actualizaciones
-            document.getElementById('clienteId').value = resultado.id;
+            const text = await response.text();
+            console.error('Response no es JSON:', text);
+            throw new Error('La respuesta del servidor no es JSON válido: ' + text);
         }
-        
-        clienteActual = resultado;
-        
-        // Guardar en localStorage para demo
-        localStorage.setItem('clientProfile', JSON.stringify(resultado));
-        
-        console.log('Cliente guardado:', resultado);
-        
-    } catch (error) {
-        console.error('Error:', error);
-        showAlert('❌ Error: ' + error.message, 'error');
-    } finally {
-        showLoading(false);
-    }
-}
 
-/**
- * Carga los datos de un cliente existente
- */
-async function cargarDatosCliente(clienteId) {
-    showLoading(true);
-    
-    try {
-        const cliente = await clienteAPI.obtenerCliente(clienteId);
-        clienteActual = cliente;
-        
-        // Llenar datos personales
-        document.getElementById('clienteId').value = cliente.id;
-        document.getElementById('nombreCompleto').value = cliente.nombreCompleto;
-        document.getElementById('email').value = cliente.email;
-        document.getElementById('phone').value = cliente.telefono;
-        
-        // Email solo lectura si es actualización
-        document.getElementById('email').readOnly = true;
-        
-        // Foto de perfil
-        if (cliente.fotoPerfilUrl) {
-            const preview = document.getElementById('photoPreview');
-            preview.innerHTML = `<img src="${cliente.fotoPerfilUrl}" alt="Foto de perfil">`;
-        }
-        
-        // Categorías favoritas
-        if (cliente.categoriasFavoritas && cliente.categoriasFavoritas.length > 0) {
-            cliente.categoriasFavoritas.forEach(categoria => {
-                const checkbox = document.querySelector(`input[name="categoria"][value="${categoria}"]`);
-                if (checkbox) {
-                    checkbox.checked = true;
-                }
-            });
-        }
-        
-        // Preferencias de búsqueda
-        if (cliente.radioBusqueda) {
-            document.getElementById('searchRadius').value = cliente.radioBusqueda;
-            updateRangeValue(document.getElementById('searchRadius'));
-        }
-        
-        if (cliente.presupuestoPromedio) {
-            document.getElementById('presupuestoPromedio').value = cliente.presupuestoPromedio;
-        }
-        
-        // Notificaciones
-        if (cliente.notificacionesEmail) {
-            document.getElementById('emailNotifications').classList.add('active');
-        }
-        if (cliente.notificacionesPush) {
-            document.getElementById('pushNotifications').classList.add('active');
-        }
-        if (cliente.notificacionesPromociones) {
-            document.getElementById('promotionNotifications').classList.add('active');
-        }
-        if (cliente.notificacionesResenas) {
-            document.getElementById('reviewNotifications').classList.add('active');
-        }
-        
-        // Privacidad
-        if (cliente.perfilVisible) {
-            document.getElementById('profileVisible').classList.add('active');
-        }
-        if (cliente.compartirUbicacion) {
-            document.getElementById('shareLocation').classList.add('active');
-        }
-        if (cliente.historialPublico) {
-            document.getElementById('publicHistory').classList.add('active');
-        }
-        
-        // Direcciones
-        if (cliente.direcciones && cliente.direcciones.length > 0) {
-            // Limpiar contenedor
-            const container = document.getElementById('addressesContainer');
-            container.innerHTML = '';
-            addressCount = 0;
-            
-            cliente.direcciones.forEach((direccion, index) => {
-                // Usar addAddress o crear directamente
-                const addressItem = createAddressElement(direccion, index);
-                container.appendChild(addressItem);
-                addressCount++;
-            });
-            
-            if (addressCount >= maxAddresses) {
-                document.getElementById('addAddressBtn').style.display = 'none';
+        if (response.ok && result.success) {
+            showAlert(`✅ ${clienteId ? 'Actualizado' : 'Registrado'} exitosamente`, 'success');
+            if (!clienteId && result.data && result.data.id) {
+                setTimeout(() => {
+                    window.location.href = `perfil_cliente.html?id=${result.data.id}`;
+                }, 2000);
             }
+        } else {
+            // Mostrar error específico del servidor
+            const errorMsg = result.error
+                ? `${result.error.codigo}: ${result.error.mensaje}`
+                : result.message || 'Error desconocido';
+            throw new Error(errorMsg);
         }
-        
-        showAlert('Datos cargados correctamente', 'success');
-        
     } catch (error) {
-        console.error('Error al cargar cliente:', error);
-        showAlert('Error al cargar los datos del cliente', 'error');
-    } finally {
-        showLoading(false);
+        console.error('Error completo:', error);
+        showAlert('❌ Error: ' + error.message, 'error');
     }
 }
 
-/**
- * Crea un elemento HTML para una dirección
- */
-function createAddressElement(direccion, index) {
-    const div = document.createElement('div');
-    div.className = 'address-item';
-    
-    const tipoLabel = direccion.tipo === 'PRINCIPAL' ? '🏠 Casa' :
-                      direccion.tipo === 'OFICINA' ? '🏢 Oficina' :
-                      direccion.tipo === 'TRABAJO' ? '🏪 Trabajo' : '👥 Otro';
-    
-    div.innerHTML = `
-        <div class="address-type">${tipoLabel}</div>
-        <div class="form-row two-cols" style="margin-top: 15px;">
-            <div class="form-group">
-                <label class="form-label">Dirección Completa *</label>
-                <input type="text" class="form-input" name="direccion[]" 
-                       value="${direccion.direccionCompleta}" required>
-            </div>
-            <div class="form-group">
-                <label class="form-label">Distrito *</label>
-                <select class="form-input" name="distrito[]" required>
-                    <option value="">Seleccionar distrito</option>
-                    <option value="miraflores" ${direccion.distrito === 'miraflores' ? 'selected' : ''}>Miraflores</option>
-                    <option value="san_isidro" ${direccion.distrito === 'san_isidro' ? 'selected' : ''}>San Isidro</option>
-                    <option value="surco" ${direccion.distrito === 'surco' ? 'selected' : ''}>Santiago de Surco</option>
-                    <option value="la_molina" ${direccion.distrito === 'la_molina' ? 'selected' : ''}>La Molina</option>
-                    <option value="san_borja" ${direccion.distrito === 'san_borja' ? 'selected' : ''}>San Borja</option>
-                    <option value="surquillo" ${direccion.distrito === 'surquillo' ? 'selected' : ''}>Surquillo</option>
-                    <option value="barranco" ${direccion.distrito === 'barranco' ? 'selected' : ''}>Barranco</option>
-                    <option value="chorrillos" ${direccion.distrito === 'chorrillos' ? 'selected' : ''}>Chorrillos</option>
-                    <option value="lince" ${direccion.distrito === 'lince' ? 'selected' : ''}>Lince</option>
-                    <option value="jesus_maria" ${direccion.distrito === 'jesus_maria' ? 'selected' : ''}>Jesús María</option>
-                </select>
-            </div>
-        </div>
-        <div class="form-group">
-            <label class="form-label">Referencias</label>
-            <input type="text" class="form-input" name="referencia[]" 
-                   value="${direccion.referencias || ''}" 
-                   placeholder="Cerca del parque, frente a la farmacia">
-        </div>
-        <input type="hidden" name="tipo[]" value="${direccion.tipo}">
-        <input type="hidden" name="esPrincipal[]" value="${direccion.esPrincipal}">
-        ${index > 0 ? '<button type="button" class="btn-remove" onclick="removeAddress(this)">✕</button>' : ''}
-    `;
-    
-    return div;
-}
+document.getElementById('clientProfileForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    if (!validateForm()) return;
+    showAlert('Guardando...', 'info');
+    const formData = collectFormData();
+    await enviarDatos(formData);
+});
 
-/**
- * Cancela la edición y vuelve al listado
- */
 function cancelForm() {
-    if (confirm('¿Está seguro de cancelar? Los cambios no guardados se perderán.')) {
-        window.location.href = 'listado_clientes.jsp';
+    if (confirm('¿Cancelar? Los cambios se perderán.')) {
+        window.location.href = 'dashboard.html';
     }
 }
 
-/**
- * Exporta los datos del cliente
- */
 function exportData() {
-    const cliente = clienteActual || JSON.parse(localStorage.getItem('clientProfile') || '{}');
-    
-    if (!cliente || !cliente.id) {
-        showAlert('No hay datos para exportar', 'error');
-        return;
-    }
-    
-    const dataStr = JSON.stringify(cliente, null, 2);
-    const blob = new Blob([dataStr], { type: 'application/json' });
+    const formData = collectFormData();
+    const blob = new Blob([JSON.stringify(formData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `cliente_${cliente.id}_${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(a);
+    a.download = `perfil_${Date.now()}.json`;
     a.click();
-    document.body.removeChild(a);
     URL.revokeObjectURL(url);
-    
-    showAlert('📥 Datos exportados exitosamente', 'success');
+    showAlert('📥 Datos exportados', 'success');
 }
 
-/**
- * Muestra un mensaje de alerta
- */
-function showAlert(message, type = 'info') {
+function showAlert(message, type) {
     const container = document.getElementById('alertContainer');
     const alert = document.createElement('div');
     alert.className = `alert alert-${type}`;
     alert.innerHTML = message;
-    
     container.innerHTML = '';
     container.appendChild(alert);
-    
+    alert.style.display = 'block';
     if (type === 'success') {
-        setTimeout(() => {
-            alert.style.display = 'none';
-        }, 5000);
+        setTimeout(() => { alert.style.display = 'none'; }, 5000);
     }
 }
 
-/**
- * Muestra/oculta el indicador de carga
- */
-function showLoading(show) {
-    let loading = document.querySelector('.loading');
-    
-    if (!loading) {
-        loading = document.createElement('div');
-        loading.className = 'loading';
-        loading.innerHTML = '<div class="spinner"></div>';
-        document.body.appendChild(loading);
-    }
-    
-    if (show) {
-        loading.classList.add('active');
-    } else {
-        loading.classList.remove('active');
+async function cargarDatosUsuario() {
+    try {
+        // Obtener datos del usuario desde localStorage
+        const userData = JSON.parse(localStorage.getItem('userData') || '{}');
+
+        if (!userData.email) {
+            showAlert('⚠️ No se encontró información del usuario. Redirigiendo al login...', 'error');
+            setTimeout(() => {
+                window.location.href = 'login.html';
+            }, 2000);
+            return;
+        }
+
+        // Intentar buscar el perfil de cliente existente por email
+        try {
+            const response = await fetch(`${BASE_URL}?email=${encodeURIComponent(userData.email)}`);
+            const result = await response.json();
+
+            if (result.success && result.data && result.data.id) {
+                // Cliente encontrado - cargar todos los datos
+                cargarDatosCliente(result.data);
+                clienteId = result.data.id;
+                document.querySelector('.header h1').textContent = '✏️ Editar Perfil de Cliente';
+            } else if (result.success && result.data && result.data.encontrado === false) {
+                // Cliente no encontrado - pre-llenar con datos del usuario
+                preLlenarConDatosUsuario(userData);
+                document.querySelector('.header h1').textContent = '📋 Completar Perfil de Cliente';
+                showAlert('ℹ️ Complete su perfil de cliente con información adicional', 'info');
+            } else {
+                // Error inesperado
+                preLlenarConDatosUsuario(userData);
+            }
+        } catch (error) {
+            console.error('Error al buscar cliente:', error);
+            // En caso de error, pre-llenar con datos del usuario
+            preLlenarConDatosUsuario(userData);
+        }
+
+        // El email siempre debe ser readonly ya que viene del usuario
+        document.getElementById('email').setAttribute('readonly', true);
+        document.getElementById('email').style.backgroundColor = '#e9ecef';
+
+    } catch (error) {
+        console.error('Error al cargar datos:', error);
+        showAlert('❌ Error al cargar la información', 'error');
     }
 }
+
+function preLlenarConDatosUsuario(userData) {
+    // Pre-llenar solo los datos básicos del usuario
+    document.getElementById('fullName').value = userData.nombre || '';
+    document.getElementById('email').value = userData.email || '';
+    document.getElementById('phone').value = userData.telefono || '';
+
+    console.log('✓ Datos del usuario pre-llenados');
+}
+
+function cargarDatosCliente(cliente) {
+    console.log('Cargando datos del cliente:', cliente);
+
+    // Datos personales
+    document.getElementById('fullName').value = cliente.nombreCompleto || '';
+    document.getElementById('email').value = cliente.email || '';
+    document.getElementById('phone').value = cliente.telefono || '';
+
+    // Foto de perfil
+    if (cliente.fotoPerfilUrl) {
+        const previewImg = document.getElementById('previewImg');
+        const uploadPlaceholder = document.querySelector('.upload-placeholder');
+
+        previewImg.src = cliente.fotoPerfilUrl;
+        previewImg.style.display = 'block';
+        if (uploadPlaceholder) uploadPlaceholder.style.display = 'none';
+
+        photoBase64 = cliente.fotoPerfilUrl;
+    }
+
+    // ✅ CATEGORÍAS FAVORITAS - CORREGIDO
+    if (cliente.categoriasFavoritas) {
+        console.log('Categorías recibidas:', cliente.categoriasFavoritas);
+
+        // Limpiar checkboxes previos
+        document.querySelectorAll('input[name="categoria"]').forEach(cb => cb.checked = false);
+
+        // Manejar si es array o string
+        let categorias = [];
+        if (Array.isArray(cliente.categoriasFavoritas)) {
+            categorias = cliente.categoriasFavoritas;
+        } else if (typeof cliente.categoriasFavoritas === 'string') {
+            categorias = cliente.categoriasFavoritas.split(',').map(c => c.trim());
+        }
+
+        console.log('Categorías procesadas:', categorias);
+
+        // Marcar checkboxes
+        categorias.forEach(cat => {
+            // Limpiar comillas extras y espacios
+            const cleanCat = String(cat).replace(/^["']|["']$/g, '').trim();
+
+            if (!cleanCat) return; // Saltar si está vacío
+
+            const checkbox = document.querySelector(`input[name="categoria"][value="${cleanCat}"]`);
+            if (checkbox) {
+                checkbox.checked = true;
+                console.log(`✓ Categoría marcada: ${cleanCat}`);
+            } else {
+                console.warn(`⚠ Checkbox no encontrado para categoría: "${cleanCat}"`);
+                console.log(`Checkboxes disponibles:`,
+                    Array.from(document.querySelectorAll('input[name="categoria"]'))
+                        .map(cb => cb.value)
+                );
+            }
+        });
+    }
+
+ 	// ✅ PREFERENCIAS - CON VALIDACIÓN
+    const searchRadius = document.getElementById('searchRadius');
+    const rangeValue = document.getElementById('rangeValue');
+    const averageBudget = document.getElementById('averageBudget');
+
+    if (searchRadius) searchRadius.value = cliente.radioBusqueda || 10;
+    if (rangeValue) rangeValue.textContent = cliente.radioBusqueda || 10;
+    if (averageBudget) averageBudget.value = cliente.presupuestoPromedio || '';
+
+    // ✅ NOTIFICACIONES - CON VALIDACIÓN
+    const emailNotif = document.getElementById('emailNotif');
+    const pushNotif = document.getElementById('pushNotif');
+    const promoNotif = document.getElementById('promoNotif');
+    const reviewNotif = document.getElementById('reviewNotif');
+
+    if (emailNotif) emailNotif.checked = cliente.notificacionesEmail !== false;
+    if (pushNotif) pushNotif.checked = cliente.notificacionesPush !== false;
+    if (promoNotif) promoNotif.checked = cliente.notificacionesPromociones !== false;
+    if (reviewNotif) reviewNotif.checked = cliente.notificacionesResenas !== false;
+
+    // ✅ PRIVACIDAD - CON VALIDACIÓN
+    const profileVisible = document.getElementById('profileVisible');
+    const shareLocation = document.getElementById('shareLocation');
+    const publicHistory = document.getElementById('publicHistory');
+
+    if (profileVisible) profileVisible.checked = cliente.perfilVisible !== false;
+    if (shareLocation) shareLocation.checked = cliente.compartirUbicacion === true;
+    if (publicHistory) publicHistory.checked = cliente.historialPublico === true;
+
+    // Direcciones
+    if (cliente.direcciones && cliente.direcciones.length > 0) {
+        cargarDirecciones(cliente.direcciones);
+    }
+
+    console.log('✓ Datos del cliente cargados completamente');
+
+}
+
+function cargarDirecciones(direcciones) {
+    const container = document.getElementById('addressesContainer');
+    container.innerHTML = '';
+    addressCount = 0;
+
+    direcciones.forEach((dir, index) => {
+        if (index === 0) {
+            // Primera dirección (principal)
+            container.innerHTML = `
+                <div class="address-item">
+                    <div class="address-type">🏠 Casa (Principal)</div>
+                    <div class="form-row two-cols" style="margin-top: 15px;">
+                        <div class="form-group">
+                            <label class="form-label">Dirección Completa</label>
+                            <input type="text" class="form-input" name="address[]" value="${dir.direccionCompleta || ''}" placeholder="Av. Principal 123">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Distrito</label>
+                            <select class="form-input" name="district[]">
+                                <option value="">Seleccionar</option>
+                                <option value="miraflores" ${dir.distrito === 'miraflores' ? 'selected' : ''}>Miraflores</option>
+                                <option value="san_isidro" ${dir.distrito === 'san_isidro' ? 'selected' : ''}>San Isidro</option>
+                                <option value="surco" ${dir.distrito === 'surco' ? 'selected' : ''}>Santiago de Surco</option>
+                                <option value="la_molina" ${dir.distrito === 'la_molina' ? 'selected' : ''}>La Molina</option>
+                                <option value="san_borja" ${dir.distrito === 'san_borja' ? 'selected' : ''}>San Borja</option>
+                                <option value="surquillo" ${dir.distrito === 'surquillo' ? 'selected' : ''}>Surquillo</option>
+                                <option value="barranco" ${dir.distrito === 'barranco' ? 'selected' : ''}>Barranco</option>
+                                <option value="chorrillos" ${dir.distrito === 'chorrillos' ? 'selected' : ''}>Chorrillos</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Referencias</label>
+                        <input type="text" class="form-input" name="reference[]" value="${dir.referencias || ''}" placeholder="Cerca del parque">
+                    </div>
+                </div>
+            `;
+            addressCount = 1;
+        } else {
+            // Direcciones adicionales
+            const types = ['🏢 Oficina', '🏪 Trabajo', '📍 Otra'];
+            const type = types[index - 1] || '📍 Dirección ' + (index + 1);
+
+            const newAddress = document.createElement('div');
+            newAddress.className = 'address-item';
+            newAddress.innerHTML = `
+                <div class="address-type">${type}</div>
+                <div class="form-row two-cols" style="margin-top: 15px;">
+                    <div class="form-group">
+                        <label class="form-label">Dirección Completa</label>
+                        <input type="text" class="form-input" name="address[]" value="${dir.direccionCompleta || ''}" placeholder="Av. Principal 123">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Distrito</label>
+                        <select class="form-input" name="district[]">
+                            <option value="">Seleccionar</option>
+                            <option value="miraflores" ${dir.distrito === 'miraflores' ? 'selected' : ''}>Miraflores</option>
+                            <option value="san_isidro" ${dir.distrito === 'san_isidro' ? 'selected' : ''}>San Isidro</option>
+                            <option value="surco" ${dir.distrito === 'surco' ? 'selected' : ''}>Santiago de Surco</option>
+                            <option value="la_molina" ${dir.distrito === 'la_molina' ? 'selected' : ''}>La Molina</option>
+                            <option value="san_borja" ${dir.distrito === 'san_borja' ? 'selected' : ''}>San Borja</option>
+                            <option value="surquillo" ${dir.distrito === 'surquillo' ? 'selected' : ''}>Surquillo</option>
+                            <option value="barranco" ${dir.distrito === 'barranco' ? 'selected' : ''}>Barranco</option>
+                            <option value="chorrillos" ${dir.distrito === 'chorrillos' ? 'selected' : ''}>Chorrillos</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Referencias</label>
+                    <input type="text" class="form-input" name="reference[]" value="${dir.referencias || ''}" placeholder="Cerca del parque">
+                </div>
+                <button type="button" class="btn-remove" onclick="removeAddress(this)">✕</button>
+            `;
+            container.appendChild(newAddress);
+            addressCount++;
+        }
+    });
+
+    if (addressCount >= MAX_ADDRESSES) {
+        document.getElementById('addAddressBtn').style.display = 'none';
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar dirección principal vacía
+    inicializarDireccionPrincipal();
+
+    // Cargar datos del usuario o cliente
+    cargarDatosUsuario();
+});
+
+console.log('✅ App configurada - Base URL:', BASE_URL);

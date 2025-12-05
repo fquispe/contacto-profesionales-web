@@ -25,12 +25,17 @@ const PerfilProfesionalAPI = {
      * Obtiene el perfil completo del profesional.
      * Incluye: datos básicos, certificaciones, proyectos, antecedentes, redes sociales, etc.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro (desde localStorage)
+     *
+     * @param {number} profesionalId - ID del profesional
      * @returns {Promise<Object>} Perfil completo consolidado
      */
-    async obtenerPerfilCompleto() {
+    async obtenerPerfilCompleto(profesionalId) {
         try {
-            const response = await fetch(`${this.baseURL}/perfil`, {
+            // ✅ Enviar profesionalId como query parameter
+            const response = await fetch(`${this.baseURL}/perfil?profesionalId=${profesionalId}`, {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -53,13 +58,17 @@ const PerfilProfesionalAPI = {
     /**
      * Actualiza los datos básicos del perfil profesional.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora envía profesionalId como query parameter
+     *
+     * @param {number} profesionalId - ID del profesional
      * @param {Object} datos - Datos básicos a actualizar
      * @returns {Promise<Object>} Perfil actualizado
      */
-    async actualizarDatosBasicos(datos) {
+    async actualizarDatosBasicos(profesionalId, datos) {
         try {
-            const response = await fetch(`${this.baseURL}/perfil`, {
+            const response = await fetch(`${this.baseURL}/perfil?profesionalId=${profesionalId}`, {
                 method: 'PUT',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -87,12 +96,16 @@ const PerfilProfesionalAPI = {
     /**
      * Lista todas las certificaciones del profesional.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @returns {Promise<Array>} Lista de certificaciones
      */
-    async listarCertificaciones() {
+    async listarCertificaciones(profesionalId) {
         try {
-            const response = await fetch(`${this.baseURL}/certificaciones`, {
+            const response = await fetch(`${this.baseURL}/certificaciones?profesionalId=${profesionalId}`, {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -115,13 +128,17 @@ const PerfilProfesionalAPI = {
     /**
      * Crea una nueva certificación.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @param {Object} certificacion - Datos de la certificación
      * @returns {Promise<Object>} Certificación creada
      */
-    async crearCertificacion(certificacion) {
+    async crearCertificacion(profesionalId, certificacion) {
         try {
-            const response = await fetch(`${this.baseURL}/certificaciones`, {
+            const response = await fetch(`${this.baseURL}/certificaciones?profesionalId=${profesionalId}`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -145,13 +162,17 @@ const PerfilProfesionalAPI = {
     /**
      * Actualiza una certificación existente.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @param {Object} certificacion - Certificación con datos actualizados (debe incluir id)
      * @returns {Promise<Object>} Certificación actualizada
      */
-    async actualizarCertificacion(certificacion) {
+    async actualizarCertificacion(profesionalId, certificacion) {
         try {
-            const response = await fetch(`${this.baseURL}/certificaciones`, {
+            const response = await fetch(`${this.baseURL}/certificaciones?profesionalId=${profesionalId}`, {
                 method: 'PUT',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -175,13 +196,17 @@ const PerfilProfesionalAPI = {
     /**
      * Elimina (soft delete) una certificación.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @param {number} id - ID de la certificación
      * @returns {Promise<boolean>} true si se eliminó correctamente
      */
-    async eliminarCertificacion(id) {
+    async eliminarCertificacion(profesionalId, id) {
         try {
-            const response = await fetch(`${this.baseURL}/certificaciones?id=${id}`, {
+            const response = await fetch(`${this.baseURL}/certificaciones?profesionalId=${profesionalId}&id=${id}`, {
                 method: 'DELETE',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -208,12 +233,16 @@ const PerfilProfesionalAPI = {
     /**
      * Lista todos los proyectos del profesional (con imágenes).
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @returns {Promise<Array>} Lista de proyectos
      */
-    async listarProyectos() {
+    async listarProyectos(profesionalId) {
         try {
-            const response = await fetch(`${this.baseURL}/proyectos`, {
+            const response = await fetch(`${this.baseURL}/proyectos?profesionalId=${profesionalId}`, {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -243,6 +272,7 @@ const PerfilProfesionalAPI = {
         try {
             const response = await fetch(`${this.baseURL}/proyectos?id=${id}`, {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -266,13 +296,17 @@ const PerfilProfesionalAPI = {
      * Crea un nuevo proyecto.
      * Valida que no se exceda el límite de 20 proyectos.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @param {Object} proyecto - Datos del proyecto
      * @returns {Promise<Object>} Proyecto creado
      */
-    async crearProyecto(proyecto) {
+    async crearProyecto(profesionalId, proyecto) {
         try {
-            const response = await fetch(`${this.baseURL}/proyectos`, {
+            const response = await fetch(`${this.baseURL}/proyectos?profesionalId=${profesionalId}`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -297,13 +331,17 @@ const PerfilProfesionalAPI = {
      * Actualiza un proyecto existente.
      * NO permite actualizar calificación del cliente (solo lectura).
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @param {Object} proyecto - Proyecto con datos actualizados (debe incluir id)
      * @returns {Promise<Object>} Proyecto actualizado
      */
-    async actualizarProyecto(proyecto) {
+    async actualizarProyecto(profesionalId, proyecto) {
         try {
-            const response = await fetch(`${this.baseURL}/proyectos`, {
+            const response = await fetch(`${this.baseURL}/proyectos?profesionalId=${profesionalId}`, {
                 method: 'PUT',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -327,13 +365,17 @@ const PerfilProfesionalAPI = {
     /**
      * Elimina (soft delete) un proyecto.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @param {number} id - ID del proyecto
      * @returns {Promise<boolean>} true si se eliminó correctamente
      */
-    async eliminarProyecto(id) {
+    async eliminarProyecto(profesionalId, id) {
         try {
-            const response = await fetch(`${this.baseURL}/proyectos?id=${id}`, {
+            const response = await fetch(`${this.baseURL}/proyectos?profesionalId=${profesionalId}&id=${id}`, {
                 method: 'DELETE',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -367,6 +409,7 @@ const PerfilProfesionalAPI = {
         try {
             const response = await fetch(`${this.baseURL}/proyectos/imagenes?proyectoId=${proyectoId}`, {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -397,6 +440,7 @@ const PerfilProfesionalAPI = {
         try {
             const response = await fetch(`${this.baseURL}/proyectos/imagenes`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -427,6 +471,7 @@ const PerfilProfesionalAPI = {
         try {
             const response = await fetch(`${this.baseURL}/proyectos/imagenes?id=${id}`, {
                 method: 'DELETE',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -459,6 +504,7 @@ const PerfilProfesionalAPI = {
         try {
             const response = await fetch(`${this.baseURL}/antecedentes`, {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -489,6 +535,7 @@ const PerfilProfesionalAPI = {
         try {
             const response = await fetch(`${this.baseURL}/antecedentes`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -520,6 +567,7 @@ const PerfilProfesionalAPI = {
         try {
             const response = await fetch(`${this.baseURL}/antecedentes`, {
                 method: 'PUT',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -550,6 +598,7 @@ const PerfilProfesionalAPI = {
         try {
             const response = await fetch(`${this.baseURL}/antecedentes?id=${id}`, {
                 method: 'DELETE',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -576,12 +625,16 @@ const PerfilProfesionalAPI = {
     /**
      * Lista todas las redes sociales del profesional.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @returns {Promise<Array>} Lista de redes sociales
      */
-    async listarRedesSociales() {
+    async listarRedesSociales(profesionalId) {
         try {
-            const response = await fetch(`${this.baseURL}/redes-sociales`, {
+            const response = await fetch(`${this.baseURL}/redes-sociales?profesionalId=${profesionalId}`, {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -604,13 +657,17 @@ const PerfilProfesionalAPI = {
     /**
      * Crea una nueva red social.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @param {Object} redSocial - Datos de la red social
      * @returns {Promise<Object>} Red social creada
      */
-    async crearRedSocial(redSocial) {
+    async crearRedSocial(profesionalId, redSocial) {
         try {
-            const response = await fetch(`${this.baseURL}/redes-sociales`, {
+            const response = await fetch(`${this.baseURL}/redes-sociales?profesionalId=${profesionalId}`, {
                 method: 'POST',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -634,13 +691,17 @@ const PerfilProfesionalAPI = {
     /**
      * Actualiza una red social existente.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @param {Object} redSocial - Red social con datos actualizados (debe incluir id)
      * @returns {Promise<Object>} Red social actualizada
      */
-    async actualizarRedSocial(redSocial) {
+    async actualizarRedSocial(profesionalId, redSocial) {
         try {
-            const response = await fetch(`${this.baseURL}/redes-sociales`, {
+            const response = await fetch(`${this.baseURL}/redes-sociales?profesionalId=${profesionalId}`, {
                 method: 'PUT',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -665,13 +726,17 @@ const PerfilProfesionalAPI = {
      * Actualización masiva de redes sociales (transaccional).
      * Desactiva las no enviadas, actualiza existentes, inserta nuevas.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @param {Array} redesSociales - Array de redes sociales
      * @returns {Promise<Array>} Redes sociales actualizadas
      */
-    async actualizarRedesSocialesMultiples(redesSociales) {
+    async actualizarRedesSocialesMultiples(profesionalId, redesSociales) {
         try {
-            const response = await fetch(`${this.baseURL}/redes-sociales`, {
+            const response = await fetch(`${this.baseURL}/redes-sociales?profesionalId=${profesionalId}`, {
                 method: 'PUT',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -695,13 +760,17 @@ const PerfilProfesionalAPI = {
     /**
      * Elimina (soft delete) una red social.
      *
+     * ✅ ACTUALIZADO 2025-12-04: Ahora recibe profesionalId como parámetro
+     *
+     * @param {number} profesionalId - ID del profesional
      * @param {number} id - ID de la red social
      * @returns {Promise<boolean>} true si se eliminó correctamente
      */
-    async eliminarRedSocial(id) {
+    async eliminarRedSocial(profesionalId, id) {
         try {
-            const response = await fetch(`${this.baseURL}/redes-sociales?id=${id}`, {
+            const response = await fetch(`${this.baseURL}/redes-sociales?profesionalId=${profesionalId}&id=${id}`, {
                 method: 'DELETE',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()
@@ -742,6 +811,7 @@ const PerfilProfesionalAPI = {
 
             const response = await fetch(url, {
                 method: 'GET',
+                credentials: 'include',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + this.getToken()

@@ -1,5 +1,6 @@
 package com.contactoprofesionales.dao.profesional;
 
+import com.contactoprofesionales.dto.ModalidadTrabajoDTO;
 import com.contactoprofesionales.exception.DatabaseException;
 import com.contactoprofesionales.model.EspecialidadProfesional;
 import com.contactoprofesionales.util.DatabaseConnection;
@@ -389,6 +390,55 @@ public class EspecialidadProfesionalDAOImpl implements EspecialidadProfesionalDA
         } catch (SQLException e) {
             logger.error("Error al verificar especialidad", e);
             throw new DatabaseException("Error al verificar existencia de especialidad: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Obtiene los flags de modalidad de trabajo (remoto/presencial) de una especialidad.
+     * Implementación agregada en Migración V008.
+     *
+     * @param especialidadId ID de la especialidad
+     * @return ModalidadTrabajoDTO con los flags, o null si no existe
+     * @throws DatabaseException si ocurre un error en la BD
+     */
+    @Override
+    public ModalidadTrabajoDTO obtenerModalidadTrabajo(Integer especialidadId) throws DatabaseException {
+        if (especialidadId == null) {
+            throw new DatabaseException("El ID de especialidad no puede ser nulo");
+        }
+
+        logger.debug("Obteniendo modalidad de trabajo para especialidad ID: {}", especialidadId);
+
+        // Query para obtener los flags trabajo_remoto y trabajo_presencial
+        String sql = "SELECT id, trabajo_remoto, trabajo_presencial " +
+                    "FROM especialidades_profesional " +
+                    "WHERE id = ? AND activo = true";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setInt(1, especialidadId);
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    ModalidadTrabajoDTO dto = new ModalidadTrabajoDTO();
+                    dto.setEspecialidadId(rs.getInt("id"));
+                    dto.setTrabajoRemoto(rs.getBoolean("trabajo_remoto"));
+                    dto.setTrabajoPresencial(rs.getBoolean("trabajo_presencial"));
+
+                    logger.debug("Modalidad encontrada - Remoto: {}, Presencial: {}",
+                                dto.getTrabajoRemoto(), dto.getTrabajoPresencial());
+
+                    return dto;
+                }
+
+                logger.warn("No se encontró especialidad activa con ID: {}", especialidadId);
+                return null;
+            }
+
+        } catch (SQLException e) {
+            logger.error("Error al obtener modalidad de trabajo para especialidad ID: {}", especialidadId, e);
+            throw new DatabaseException("Error al obtener modalidad de trabajo: " + e.getMessage(), e);
         }
     }
 

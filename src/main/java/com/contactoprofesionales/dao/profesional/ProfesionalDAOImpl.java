@@ -31,15 +31,16 @@ public class ProfesionalDAOImpl implements ProfesionalDAO {
     public Profesional buscarPorId(Integer id) throws DatabaseException {
         logger.debug("Buscando profesional por ID: {}", id);
 
-        // ✅ JOIN con especialidades_profesional y categorias_servicio para obtener especialidad
-        // ✅ distrito_id viene de tabla usuarios
+        // ✅ REFACTORIZADO: Mostrar TODAS las especialidades concatenadas
         String sql = "SELECT p.*, " +
                     "u.nombre_completo, u.telefono, u.distrito_id, " +
-                    "cs.nombre AS especialidad_nombre " +
+                    "COALESCE(" +
+                    "  (SELECT STRING_AGG(ep.servicio_profesional, ', ' ORDER BY ep.es_principal DESC, ep.orden ASC) " +
+                    "   FROM especialidades_profesional ep " +
+                    "   WHERE ep.profesional_id = p.id AND ep.activo = true), " +
+                    "  'Sin especialidad') AS especialidad_nombre " +
                     "FROM profesionales p " +
                     "INNER JOIN usuarios u ON p.usuario_id = u.id " +
-                    "LEFT JOIN especialidades_profesional ep ON p.especialidad_principal_id = ep.id " +
-                    "LEFT JOIN categorias_servicio cs ON ep.categoria_id = cs.id " +
                     "WHERE p.id = ? AND p.activo = true AND u.activo = true";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -68,13 +69,16 @@ public class ProfesionalDAOImpl implements ProfesionalDAO {
     public Profesional buscarPorUsuarioId(Integer usuarioId) throws DatabaseException {
         logger.debug("Buscando profesional por usuario ID: {}", usuarioId);
 
+        // ✅ REFACTORIZADO: Mostrar TODAS las especialidades concatenadas
         String sql = "SELECT p.*, " +
                     "u.nombre_completo, u.telefono, u.distrito_id, " +
-                    "cs.nombre AS especialidad_nombre " +
+                    "COALESCE(" +
+                    "  (SELECT STRING_AGG(ep.servicio_profesional, ', ' ORDER BY ep.es_principal DESC, ep.orden ASC) " +
+                    "   FROM especialidades_profesional ep " +
+                    "   WHERE ep.profesional_id = p.id AND ep.activo = true), " +
+                    "  'Sin especialidad') AS especialidad_nombre " +
                     "FROM profesionales p " +
                     "INNER JOIN usuarios u ON p.usuario_id = u.id " +
-                    "LEFT JOIN especialidades_profesional ep ON p.especialidad_principal_id = ep.id " +
-                    "LEFT JOIN categorias_servicio cs ON ep.categoria_id = cs.id " +
                     "WHERE p.usuario_id = ? AND p.activo = true AND u.activo = true";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -103,13 +107,19 @@ public class ProfesionalDAOImpl implements ProfesionalDAO {
     public List<Profesional> listarTodos() throws DatabaseException {
         logger.debug("Listando todos los profesionales");
 
+        // ✅ REFACTORIZADO: Mostrar TODAS las especialidades concatenadas cuando se lista sin filtro
         String sql = "SELECT p.*, " +
                     "u.nombre_completo, u.telefono, u.distrito_id, " +
-                    "cs.nombre AS especialidad_nombre " +
+                    "(SELECT ep.id FROM especialidades_profesional ep " +
+                    " WHERE ep.profesional_id = p.id AND ep.activo = true " +
+                    " ORDER BY ep.es_principal DESC, ep.orden ASC LIMIT 1) AS especialidad_id, " + // ID de especialidad principal
+                    "COALESCE(" +
+                    "  (SELECT STRING_AGG(ep.servicio_profesional, ', ' ORDER BY ep.es_principal DESC, ep.orden ASC) " +
+                    "   FROM especialidades_profesional ep " +
+                    "   WHERE ep.profesional_id = p.id AND ep.activo = true), " +
+                    "  'Sin especialidad') AS especialidad_nombre " +
                     "FROM profesionales p " +
                     "INNER JOIN usuarios u ON p.usuario_id = u.id " +
-                    "LEFT JOIN especialidades_profesional ep ON p.especialidad_principal_id = ep.id " +
-                    "LEFT JOIN categorias_servicio cs ON ep.categoria_id = cs.id " +
                     "WHERE p.activo = true AND u.activo = true " +
                     "ORDER BY p.calificacion_promedio DESC, p.total_resenas DESC";
 
@@ -140,15 +150,18 @@ public class ProfesionalDAOImpl implements ProfesionalDAO {
     public List<Profesional> buscarPorEspecialidad(String especialidad) throws DatabaseException {
         logger.debug("Buscando profesionales por especialidad: {}", especialidad);
 
+        // ✅ REFACTORIZADO: Mostrar solo la especialidad buscada para cada profesional
+        // Agrupa profesionales y muestra solo la especialidad que coincide con la búsqueda
         String sql = "SELECT p.*, " +
                     "u.nombre_completo, u.telefono, u.distrito_id, " +
-                    "cs.nombre AS especialidad_nombre " +
+                    "MAX(ep.id) AS especialidad_id, " + // ID de la especialidad buscada
+                    "MAX(ep.servicio_profesional) AS especialidad_nombre " + // Muestra solo la especialidad buscada
                     "FROM profesionales p " +
                     "INNER JOIN usuarios u ON p.usuario_id = u.id " +
                     "INNER JOIN especialidades_profesional ep ON p.id = ep.profesional_id " +
-                    "INNER JOIN categorias_servicio cs ON cs.id = ep.categoria_id " +
-                    "WHERE cs.nombre ILIKE ? AND p.activo = true AND u.activo = true AND ep.activo = true " +
-                    "ORDER BY p.calificacion_promedio DESC";
+                    "WHERE ep.servicio_profesional ILIKE ? AND p.activo = true AND u.activo = true AND ep.activo = true " +
+                    "GROUP BY p.id, u.nombre_completo, u.telefono, u.distrito_id " +
+                    "ORDER BY p.calificacion_promedio DESC, p.total_resenas DESC";
 
         List<Profesional> profesionales = new ArrayList<>();
 
@@ -232,27 +245,41 @@ public class ProfesionalDAOImpl implements ProfesionalDAO {
         logger.debug("Buscando con filtros - Esp: {}, Dist: {}, Cal: {}",
                     especialidad, distrito, calificacionMin);
 
-        StringBuilder sql = new StringBuilder(
-            "SELECT DISTINCT p.*, " +
-            "u.nombre_completo, u.telefono, u.distrito_id, " +
-            "cs.nombre AS especialidad_nombre " +
-            "FROM profesionales p " +
-            "INNER JOIN usuarios u ON p.usuario_id = u.id " +
-            "LEFT JOIN especialidades_profesional ep ON p.especialidad_principal_id = ep.id " +
-            "LEFT JOIN categorias_servicio cs ON ep.categoria_id = cs.id " +
-            "WHERE p.activo = true AND u.activo = true"
-        );
-
+        // ✅ REFACTORIZADO: Construir consulta dinámica según filtros
+        StringBuilder sql = new StringBuilder();
         List<Object> params = new ArrayList<>();
 
-        // ✅ Filtro de especialidad: Buscar en categorias_servicio
-        if (especialidad != null && !especialidad.isEmpty()) {
-            sql.append(" AND EXISTS (")
-               .append("SELECT 1 FROM especialidades_profesional ep2 ")
-               .append("INNER JOIN categorias_servicio cs2 ON ep2.categoria_id = cs2.id ")
-               .append("WHERE ep2.profesional_id = p.id AND ep2.activo = true ")
-               .append("AND cs2.nombre ILIKE ?)");
+        // Determinar si hay filtro de especialidad
+        boolean tieneEspecialidad = (especialidad != null && !especialidad.isEmpty());
+
+        if (tieneEspecialidad) {
+            // CASO 1: Búsqueda con especialidad específica - Mostrar SOLO la especialidad buscada
+            sql.append("SELECT p.*, ")
+               .append("u.nombre_completo, u.telefono, u.distrito_id, ")
+               .append("MAX(ep.id) AS especialidad_id, ") // ID de la especialidad buscada
+               .append("MAX(ep.servicio_profesional) AS especialidad_nombre ") // Solo la especialidad buscada
+               .append("FROM profesionales p ")
+               .append("INNER JOIN usuarios u ON p.usuario_id = u.id ")
+               .append("INNER JOIN especialidades_profesional ep ON p.id = ep.profesional_id ")
+               .append("WHERE p.activo = true AND u.activo = true ")
+               .append("AND ep.activo = true ")
+               .append("AND ep.servicio_profesional ILIKE ? ");
             params.add("%" + especialidad + "%");
+        } else {
+            // CASO 2: Listado general - Mostrar TODAS las especialidades concatenadas
+            sql.append("SELECT p.*, ")
+               .append("u.nombre_completo, u.telefono, u.distrito_id, ")
+               .append("(SELECT ep.id FROM especialidades_profesional ep ")
+               .append(" WHERE ep.profesional_id = p.id AND ep.activo = true ")
+               .append(" ORDER BY ep.es_principal DESC, ep.orden ASC LIMIT 1) AS especialidad_id, ") // ID de especialidad principal
+               .append("COALESCE(")
+               .append("  (SELECT STRING_AGG(ep.servicio_profesional, ', ' ORDER BY ep.es_principal DESC, ep.orden ASC) ")
+               .append("   FROM especialidades_profesional ep ")
+               .append("   WHERE ep.profesional_id = p.id AND ep.activo = true), ")
+               .append("  'Sin especialidad') AS especialidad_nombre ")
+               .append("FROM profesionales p ")
+               .append("INNER JOIN usuarios u ON p.usuario_id = u.id ")
+               .append("WHERE p.activo = true AND u.activo = true ");
         }
 
         // ✅ Filtro de distrito: Buscar en usuarios.distrito_id
@@ -270,6 +297,11 @@ public class ProfesionalDAOImpl implements ProfesionalDAO {
         if (calificacionMin != null && calificacionMin > 0) {
             sql.append(" AND p.calificacion_promedio >= ?");
             params.add(calificacionMin);
+        }
+
+        // ✅ Agregar GROUP BY si hay filtro de especialidad (necesario para MAX())
+        if (tieneEspecialidad) {
+            sql.append(" GROUP BY p.id, u.nombre_completo, u.telefono, u.distrito_id");
         }
 
         sql.append(" ORDER BY p.calificacion_promedio DESC, p.total_resenas DESC");
@@ -502,6 +534,15 @@ public class ProfesionalDAOImpl implements ProfesionalDAO {
         profesional.setId(rs.getInt("id"));
         profesional.setUsuarioId(rs.getInt("usuario_id"));
         profesional.setDescripcion(rs.getString("descripcion"));
+
+        // ✅ NUEVO: Biografía profesional
+        try {
+            String biografiaProfesional = rs.getString("biografia_profesional");
+            profesional.setBiografiaProfesional(biografiaProfesional);
+        } catch (SQLException e) {
+            // Columna no existe en este query, ignorar
+        }
+
         profesional.setExperiencia(rs.getString("experiencia"));
 
         // ✅ Arrays de PostgreSQL (deprecados pero aún existen en BD)
@@ -567,6 +608,16 @@ public class ProfesionalDAOImpl implements ProfesionalDAO {
         }
 
         profesional.setActivo(rs.getBoolean("activo"));
+
+        // ✅ NUEVO: ID de especialidad seleccionada (viene del JOIN)
+        try {
+            int especialidadId = rs.getInt("especialidad_id");
+            if (!rs.wasNull()) {
+                profesional.setEspecialidadId(especialidadId);
+            }
+        } catch (SQLException e) {
+            // Columna no existe en este query, ignorar
+        }
 
         // ✅ NUEVO: Especialidad desde categorias_servicio (viene del JOIN)
         try {
@@ -647,15 +698,15 @@ public class ProfesionalDAOImpl implements ProfesionalDAO {
      */
     @Override
     public List<String> obtenerEspecialidadesUnicas() throws DatabaseException {
-        logger.debug("Obteniendo especialidades únicas desde categorias_servicio");
+        logger.debug("Obteniendo especialidades únicas desde servicio_profesional");
 
-        // ✅ Consultar categorias_servicio que están siendo usadas por profesionales activos
-        String sql = "SELECT DISTINCT cs.nombre " +
-                    "FROM categorias_servicio cs " +
-                    "INNER JOIN especialidades_profesional ep ON cs.id = ep.categoria_id " +
+        // ✅ ACTUALIZADO: Consultar servicio_profesional de especialidades_profesional
+        String sql = "SELECT DISTINCT ep.servicio_profesional " +
+                    "FROM especialidades_profesional ep " +
                     "INNER JOIN profesionales p ON ep.profesional_id = p.id " +
                     "WHERE p.activo = true AND ep.activo = true " +
-                    "ORDER BY cs.nombre";
+                    "AND ep.servicio_profesional IS NOT NULL " +
+                    "ORDER BY ep.servicio_profesional";
 
         List<String> especialidades = new ArrayList<>();
 
@@ -664,7 +715,7 @@ public class ProfesionalDAOImpl implements ProfesionalDAO {
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                especialidades.add(rs.getString("nombre"));
+                especialidades.add(rs.getString("servicio_profesional"));
             }
 
             logger.debug("Encontradas {} especialidades únicas", especialidades.size());

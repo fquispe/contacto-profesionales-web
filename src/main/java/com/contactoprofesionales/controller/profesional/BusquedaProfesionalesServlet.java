@@ -210,18 +210,36 @@ public class BusquedaProfesionalesServlet extends HttpServlet {
     
     /**
      * Extrae los criterios de búsqueda de los parámetros de la petición.
+     * ACTUALIZADO: Incluye categoriaId y especialidadTexto
      */
     private BusquedaCriteriosDTO extraerCriteriosBusqueda(HttpServletRequest request) {
         BusquedaCriteriosDTO criterios = new BusquedaCriteriosDTO();
-        
-        // Especialidad
+
+        // NUEVO: Categoría ID
+        String categoriaIdStr = request.getParameter("categoriaId");
+        if (categoriaIdStr != null && !categoriaIdStr.isEmpty()) {
+            try {
+                Integer categoriaId = Integer.parseInt(categoriaIdStr);
+                criterios.setCategoriaId(categoriaId);
+            } catch (NumberFormatException e) {
+                logger.warn("Formato inválido para categoriaId: {}", categoriaIdStr);
+            }
+        }
+
+        // Especialidad (seleccionada de la lista)
         String especialidad = request.getParameter("especialidad");
         criterios.setEspecialidad(especialidad);
-        
+
+        // NUEVO: Especialidad texto libre (cuando selecciona "Otro")
+        String especialidadTexto = request.getParameter("especialidadTexto");
+        criterios.setEspecialidadTexto(especialidadTexto);
+
+        // COMENTADO: Filtros no utilizados en nueva versión
+        /*
         // Distrito
         String distrito = request.getParameter("distrito");
         criterios.setDistrito(distrito);
-        
+
         // Calificación mínima
         String calificacionMinStr = request.getParameter("calificacionMin");
         if (calificacionMinStr != null && !calificacionMinStr.isEmpty()) {
@@ -232,6 +250,7 @@ public class BusquedaProfesionalesServlet extends HttpServlet {
                 logger.warn("Formato inválido para calificacionMin: {}", calificacionMinStr);
             }
         }
+        */
         
         // Tarifa máxima
         String tarifaMaxStr = request.getParameter("tarifaMax");
