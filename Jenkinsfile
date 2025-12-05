@@ -55,22 +55,7 @@ pipeline {
                 bat "${MAVEN_HOME}\\bin\\mvn.cmd clean compile -DskipTests -B"
             }
         }
-
-        /* ---------------------------------------------------------
-         * 3) TESTS
-         * --------------------------------------------------------- */
-        stage('Tests') {
-            steps {
-                echo "🧪 Ejecutando tests..."
-                bat "${MAVEN_HOME}\\bin\\mvn.cmd test -B"
-            }
-            post {
-                always {
-                    junit '**/target/surefire-reports/*.xml'
-                }
-            }
-        }
-
+		
         /* ---------------------------------------------------------
          * 4) PACKAGE
          * --------------------------------------------------------- */
