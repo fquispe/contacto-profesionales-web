@@ -85,7 +85,7 @@ pipeline {
                     echo '✅ Código descargado exitosamente'
 
                     // Mostrar información del commit
-                    sh '''
+                    bat '''
                         echo "📌 Branch: ${GIT_BRANCH}"
                         echo "📌 Commit: $(git rev-parse --short HEAD)"
                         echo "📌 Author: $(git log -1 --pretty=format:'%an')"
@@ -107,7 +107,7 @@ pipeline {
                 }
 
                 // Limpiar y compilar sin ejecutar tests
-                sh 'mvn clean compile -DskipTests -B'
+                bat 'mvn clean compile -DskipTests -B'
 
                 script {
                     echo '✅ Compilación exitosa'
@@ -127,7 +127,7 @@ pipeline {
                 }
 
                 // Ejecutar tests
-                sh 'mvn test -B'
+                bat 'mvn test -B'
 
                 script {
                     echo '✅ Tests ejecutados exitosamente'
@@ -153,13 +153,13 @@ pipeline {
                 }
 
                 // Generar WAR sin tests (ya se ejecutaron)
-                sh 'mvn package -DskipTests -B'
+                bat 'mvn package -DskipTests -B'
 
                 script {
                     echo '✅ WAR generado exitosamente'
 
                     // Mostrar información del artefacto
-                    sh 'ls -lh target/*.war'
+                    bat 'ls -lh target/*.war'
                 }
             }
             post {
@@ -190,7 +190,7 @@ pipeline {
                     echo '⚠️  SonarQube no configurado - Saltando...'
                     // Para habilitar SonarQube, descomentar:
                     // withSonarQubeEnv('SonarQube') {
-                    //     sh 'mvn sonar:sonar'
+                    //     bat 'mvn sonar:sonar'
                     // }
                 }
             }
@@ -208,7 +208,7 @@ pipeline {
                 }
 
                 // Build de imagen Docker con multi-stage
-                sh """
+                bat """
                     docker build \
                         -t ${DOCKER_IMAGE}:${DOCKER_TAG} \
                         -t ${DOCKER_IMAGE}:${DOCKER_LATEST} \
@@ -221,7 +221,7 @@ pipeline {
                     echo '✅ Imagen Docker construida exitosamente'
 
                     // Mostrar información de la imagen
-                    sh "docker images | grep ${DOCKER_IMAGE}"
+                    bat "docker images | grep ${DOCKER_IMAGE}"
                 }
             }
         }
@@ -240,7 +240,7 @@ pipeline {
                     withCredentials([string(credentialsId: 'db-password', variable: 'DB_PASSWORD')]) {
 
                         // Stop y remover contenedor anterior si existe
-                        sh """
+                        bat """
                             echo '🛑 Deteniendo contenedor anterior si existe...'
                             docker stop ${APP_NAME} 2>/dev/null || true
                             docker rm ${APP_NAME} 2>/dev/null || true
@@ -250,7 +250,7 @@ pipeline {
                         sleep(time: 5, unit: 'SECONDS')
 
                         // Iniciar nuevo contenedor
-                        sh """
+                        bat """
                             echo '▶️  Iniciando nuevo contenedor...'
                             docker run -d \
                                 --name ${APP_NAME} \
@@ -326,7 +326,7 @@ pipeline {
 
                     // Mostrar logs del contenedor (últimas 20 líneas)
                     echo '📋 Últimos logs del contenedor:'
-                    sh "docker logs --tail 20 ${APP_NAME}"
+                    bat "docker logs --tail 20 ${APP_NAME}"
                 }
             }
         }
@@ -347,7 +347,7 @@ pipeline {
                 echo '================================================'
 
                 // Limpiar imágenes antiguas (mantener últimas 3)
-                sh """
+                bat """
                     echo '🧹 Limpiando imágenes antiguas...'
                     docker images ${DOCKER_IMAGE} --format "{{.Tag}}" | \
                         grep -v latest | \
@@ -372,7 +372,7 @@ pipeline {
                 echo '================================================'
 
                 // Mostrar logs del contenedor si existe
-                sh """
+                bat """
                     if docker ps -a | grep -q ${APP_NAME}; then
                         echo '📋 Logs del contenedor:'
                         docker logs --tail 50 ${APP_NAME}
