@@ -1,112 +1,102 @@
 // ============================================
-// Jenkinsfile para Pipeline CI/CD
-// Contacto Profesionales Web Application
+// Jenkinsfile - CI/CD Windows
+// Contacto Profesionales Web (Servlets)
 // ============================================
 
 pipeline {
     agent any
 
-    // ============================================
-    // VARIABLES DE ENTORNO
-    // ============================================
+    // Herramientas instaladas en Jenkins
+    tools {
+        maven 'Maven-3.9'
+        jdk   'JDK-17'
+    }
+
+    // Variables de entorno generales
     environment {
-        // Configuración de la aplicación
-        APP_NAME = 'contacto-profesionales-web'
-        DOCKER_IMAGE = "contacto-profesionales-web"
-        DOCKER_TAG = "${env.BUILD_NUMBER}"
-        DOCKER_LATEST = "latest"
+        // App & Docker
+        APP_NAME     = 'contacto-profesionales-web'
+        DOCKER_IMAGE = 'contacto-profesionales-web'
+        DOCKER_TAG   = "${env.BUILD_NUMBER}"
+        APP_PORT     = '9091'
+        TOMCAT_PORT  = '8080'
 
-        // Puerto de la aplicación
-        APP_PORT = '9091'
-        TOMCAT_PORT = '8080'
-
-        // Configuración de base de datos
+        // Base de datos (password desde credencial)
         DB_HOST = 'host.docker.internal'
         DB_PORT = '5432'
         DB_NAME = 'contacto_profesionales_db'
         DB_USER = 'postgres'
-        // DB_PASSWORD se debe configurar en Jenkins Credentials
 
-        // Herramientas
-        MAVEN_HOME = tool 'Maven-3.9'
-        JAVA_HOME = tool 'JDK-17'
-        PATH = "${MAVEN_HOME}/bin:${JAVA_HOME}/bin:${env.PATH}"
-
-        // Configuración de Maven
-        MAVEN_OPTS = '-Xmx1024m -XX:MaxPermSize=512m'
+        // Zona horaria del contenedor
+        TZ = 'America/Lima'
     }
 
-    // ============================================
-    // OPCIONES DEL PIPELINE
-    // ============================================
     options {
-        // Mantener solo los últimos 10 builds
         buildDiscarder(logRotator(numToKeepStr: '10'))
-
-        // Timeout del pipeline completo
         timeout(time: 30, unit: 'MINUTES')
-
-        // Deshabilitar checkout automático
         skipDefaultCheckout()
-
-        // Timestamps en logs
         timestamps()
     }
 
-    // ============================================
-    // TRIGGERS (DISPARADORES)
-    // ============================================
-    triggers {
-        // Polling cada 5 minutos (H/5 * * * *)
-        // Reemplazar con webhook de GitHub en producción
-        pollSCM('H/5 * * * *')
-    }
-
-    // ============================================
-    // STAGES (ETAPAS)
-    // ============================================
     stages {
 
         // ============================================
-        // STAGE 1: CHECKOUT
+        // 1. Checkout
         // ============================================
-        stage('📦 Checkout') {
+        stage('Checkout') {
             steps {
                 script {
-                    echo '================================================'
-                    echo '🔄 Clonando repositorio desde GitHub...'
-                    echo '================================================'
+                    echo '==============================================='
+                    echo 'Clonando repositorio desde GitHub...'
+                    echo '==============================================='
                 }
 
-                // Checkout del código desde GitHub
                 checkout scm
 
                 script {
                     echo '✅ Código descargado exitosamente'
 
-                    // Mostrar información del commit
-                    bat '''
-                        echo "📌 Branch: ${GIT_BRANCH}"
-                        echo "📌 Commit: $(git rev-parse --short HEAD)"
-                        echo "📌 Author: $(git log -1 --pretty=format:'%an')"
-                        echo "📌 Message: $(git log -1 --pretty=format:'%s')"
-                    '''
+                    // Obtener info del commit usando bat + returnStdout
+                    def branch = env.GIT_BRANCH ?: bat(
+                        script: 'git rev-parse --abbrev-ref HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    def commit = bat(
+                        script: 'git rev-parse --short HEAD',
+                        returnStdout: true
+                    ).trim()
+
+                    def author = bat(
+                        script: 'git log -1 --pretty=format:%an',
+                        returnStdout: true
+                    ).trim()
+
+                    def message = bat(
+                        script: 'git log -1 --pretty=format:%s',
+                        returnStdout: true
+                    ).trim()
+
+                    echo "Branch : ${branch}"
+                    echo "Commit : ${commit}"
+                    echo "Author : ${author}"
+                    echo "Message: ${message}"
                 }
             }
         }
 
         // ============================================
-        // STAGE 2: BUILD
+        // 2. Build
         // ============================================
-        stage('🔨 Build') {
+        stage('Build') {
             steps {
                 script {
-                    echo '================================================'
-                    echo '🔨 Compilando aplicación con Maven...'
-                    echo '================================================'
+                    echo '==============================================='
+                    echo 'Compilando aplicación con Maven...'
+                    echo '==============================================='
                 }
 
-                // Limpiar y compilar sin ejecutar tests
+                // Maven ya está en PATH por tools{}
                 bat 'mvn clean compile -DskipTests -B'
 
                 script {
@@ -116,17 +106,16 @@ pipeline {
         }
 
         // ============================================
-        // STAGE 3: TESTS
+        // 3. Tests
         // ============================================
-        stage('🧪 Tests') {
+        stage('Tests') {
             steps {
                 script {
-                    echo '================================================'
-                    echo '🧪 Ejecutando tests unitarios...'
-                    echo '================================================'
+                    echo '==============================================='
+                    echo 'Ejecutando tests unitarios...'
+                    echo '==============================================='
                 }
 
-                // Ejecutar tests
                 bat 'mvn test -B'
 
                 script {
@@ -135,47 +124,41 @@ pipeline {
             }
             post {
                 always {
-                    // Publicar reportes de tests
                     junit '**/target/surefire-reports/*.xml'
                 }
             }
         }
 
         // ============================================
-        // STAGE 4: PACKAGE
+        // 4. Package (WAR)
         // ============================================
-        stage('📦 Package') {
+        stage('Package') {
             steps {
                 script {
-                    echo '================================================'
-                    echo '📦 Generando archivo WAR...'
-                    echo '================================================'
+                    echo '==============================================='
+                    echo 'Generando archivo WAR...'
+                    echo '==============================================='
                 }
 
-                // Generar WAR sin tests (ya se ejecutaron)
                 bat 'mvn package -DskipTests -B'
 
                 script {
                     echo '✅ WAR generado exitosamente'
-
-                    // Mostrar información del artefacto
-                    bat 'ls -lh target/*.war'
+                    bat 'dir /B target\\*.war'
                 }
             }
             post {
                 success {
-                    // Archivar el WAR generado
                     archiveArtifacts artifacts: '**/target/*.war', fingerprint: true
                 }
             }
         }
 
         // ============================================
-        // STAGE 5: CODE QUALITY (Opcional)
+        // 5. Code Quality (placeholder)
         // ============================================
-        stage('📊 Code Quality') {
+        stage('Code Quality') {
             when {
-                // Solo ejecutar en branch develop o main
                 anyOf {
                     branch 'develop'
                     branch 'main'
@@ -184,219 +167,193 @@ pipeline {
             }
             steps {
                 script {
-                    echo '================================================'
-                    echo '📊 Análisis de calidad de código...'
-                    echo '================================================'
-                    echo '⚠️  SonarQube no configurado - Saltando...'
-                    // Para habilitar SonarQube, descomentar:
-                    // withSonarQubeEnv('SonarQube') {
-                    //     bat 'mvn sonar:sonar'
-                    // }
+                    echo '==============================================='
+                    echo 'Análisis de calidad de código (placeholder)...'
+                    echo '==============================================='
+                    echo 'SonarQube no configurado - etapa informativa.'
                 }
             }
         }
 
         // ============================================
-        // STAGE 6: BUILD DOCKER IMAGE
+        // 6. Build Docker Image
         // ============================================
-        stage('🐳 Build Docker Image') {
+        stage('Build Docker Image') {
             steps {
                 script {
-                    echo '================================================'
-                    echo '🐳 Construyendo imagen Docker...'
-                    echo '================================================'
+                    echo '==============================================='
+                    echo 'Construyendo imagen Docker...'
+                    echo '==============================================='
                 }
 
-                // Build de imagen Docker con multi-stage
                 bat """
-                    docker build \
-                        -t ${DOCKER_IMAGE}:${DOCKER_TAG} \
-                        -t ${DOCKER_IMAGE}:${DOCKER_LATEST} \
-                        --build-arg BUILD_DATE=\$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
-                        --build-arg VCS_REF=\$(git rev-parse --short HEAD) \
+                    docker build ^
+                        -t ${DOCKER_IMAGE}:${DOCKER_TAG} ^
+                        -t ${DOCKER_IMAGE}:latest ^
+                        --build-arg BUILD_DATE=%DATE% ^
                         .
                 """
 
                 script {
                     echo '✅ Imagen Docker construida exitosamente'
-
-                    // Mostrar información de la imagen
-                    bat "docker images | grep ${DOCKER_IMAGE}"
+                    bat "docker images ${DOCKER_IMAGE}"
                 }
             }
         }
 
         // ============================================
-        // STAGE 7: DEPLOY TO DOCKER
+        // 7. Deploy to Docker
         // ============================================
-        stage('🚀 Deploy to Docker') {
+        stage('Deploy to Docker') {
             steps {
                 script {
-                    echo '================================================'
-                    echo '🚀 Desplegando contenedor en Docker...'
-                    echo '================================================'
+                    echo '==============================================='
+                    echo 'Desplegando contenedor Docker...'
+                    echo '==============================================='
+                }
 
-                    // Obtener credenciales de la base de datos desde Jenkins
-                    withCredentials([string(credentialsId: 'db-password', variable: 'DB_PASSWORD')]) {
+                withCredentials([string(credentialsId: 'db-password', variable: 'DB_PASSWORD')]) {
+                    bat """
+                        echo Deteniendo contenedor previo (si existe)...
+                        docker stop ${APP_NAME} 2>NUL || echo No había contenedor previo
+                        docker rm   ${APP_NAME} 2>NUL || echo No había contenedor previo
 
-                        // Stop y remover contenedor anterior si existe
-                        bat """
-                            echo '🛑 Deteniendo contenedor anterior si existe...'
-                            docker stop ${APP_NAME} 2>/dev/null || true
-                            docker rm ${APP_NAME} 2>/dev/null || true
-                        """
+                        echo Iniciando nuevo contenedor...
+                        docker run -d ^
+                          --name ${APP_NAME} ^
+                          -p ${APP_PORT}:${TOMCAT_PORT} ^
+                          -e DB_HOST=${DB_HOST} ^
+                          -e DB_PORT=${DB_PORT} ^
+                          -e DB_NAME=${DB_NAME} ^
+                          -e DB_USER=${DB_USER} ^
+                          -e DB_PASSWORD=${DB_PASSWORD} ^
+                          -e TZ=${TZ} ^
+                          --restart unless-stopped ^
+                          ${DOCKER_IMAGE}:latest
+                    """
 
-                        // Esperar a que el contenedor se detenga completamente
-                        sleep(time: 5, unit: 'SECONDS')
-
-                        // Iniciar nuevo contenedor
-                        bat """
-                            echo '▶️  Iniciando nuevo contenedor...'
-                            docker run -d \
-                                --name ${APP_NAME} \
-                                -p ${APP_PORT}:${TOMCAT_PORT} \
-                                -e DB_HOST=${DB_HOST} \
-                                -e DB_PORT=${DB_PORT} \
-                                -e DB_NAME=${DB_NAME} \
-                                -e DB_USER=${DB_USER} \
-                                -e DB_PASSWORD=${DB_PASSWORD} \
-                                -e TZ=America/Lima \
-                                --restart unless-stopped \
-                                ${DOCKER_IMAGE}:${DOCKER_LATEST}
-                        """
-
-                        echo '✅ Contenedor desplegado exitosamente'
-                    }
+                    echo '✅ Contenedor desplegado exitosamente'
                 }
             }
         }
 
         // ============================================
-        // STAGE 8: HEALTH CHECK
+        // 8. Health Check
         // ============================================
-        stage('🏥 Health Check') {
+        stage('Health Check') {
             steps {
                 script {
-                    echo '================================================'
-                    echo '🏥 Verificando salud de la aplicación...'
-                    echo '================================================'
+                    echo '==============================================='
+                    echo 'Verificando salud de la aplicación...'
+                    echo '==============================================='
+                    echo 'Esperando 30 segundos a que levante el contenedor...'
+                }
 
-                    // Esperar 30 segundos para que la aplicación inicie
-                    echo '⏳ Esperando que la aplicación inicie (30s)...'
-                    sleep(time: 30, unit: 'SECONDS')
+                // Espera inicial
+                bat 'ping -n 6 127.0.0.1 >NUL'
 
-                    // Verificar que el contenedor esté corriendo
-                    def containerStatus = sh(
-                        script: "docker ps --filter name=${APP_NAME} --format '{{.Status}}'",
+                // Verificar que el contenedor esté "Up"
+                script {
+                    def status = bat(
+                        script: "docker ps --filter \"name=${APP_NAME}\" --format \"#{Status}\"",
                         returnStdout: true
                     ).trim()
 
-                    if (containerStatus.contains('Up')) {
-                        echo "✅ Contenedor está corriendo: ${containerStatus}"
+                    if (!status.toLowerCase().contains('up')) {
+                        error "❌ El contenedor ${APP_NAME} no está corriendo. Status: ${status}"
                     } else {
-                        error "❌ Contenedor no está corriendo"
+                        echo "✅ Contenedor corriendo: ${status}"
                     }
+                }
 
-                    // Health check HTTP
-                    def maxRetries = 5
-                    def retryCount = 0
-                    def healthCheckPassed = false
-
-                    while (retryCount < maxRetries && !healthCheckPassed) {
-                        retryCount++
-                        echo "🔍 Intento ${retryCount}/${maxRetries}: Verificando endpoint..."
-
-                        def exitCode = sh(
-                            script: "curl -f -s -o /dev/null -w '%{http_code}' http://localhost:${APP_PORT}/ContactoProfesionalesWeb/ || true",
-                            returnStatus: true
-                        )
-
-                        if (exitCode == 0) {
-                            healthCheckPassed = true
-                            echo '✅ Health check exitoso - Aplicación responde correctamente'
-                        } else if (retryCount < maxRetries) {
-                            echo "⚠️  Health check falló, reintentando en 10s..."
-                            sleep(time: 10, unit: 'SECONDS')
+                // Health check HTTP con PowerShell
+                script {
+                    def psCmd = """
+                        \$maxRetries = 5
+                        \$ok = \$false
+                        for (\$i = 1; \$i -le \$maxRetries -and -not \$ok; \$i++) {
+                            Write-Host "Intento \$i de \$maxRetries..."
+                            try {
+                                \$r = Invoke-WebRequest -UseBasicParsing -Uri 'http://localhost:${APP_PORT}/ContactoProfesionalesWeb/' -TimeoutSec 10
+                                if (\$r.StatusCode -eq 200) {
+                                    Write-Host "Health check OK"
+                                    \$ok = \$true
+                                }
+                            } catch {
+                                Write-Host "Health check falló, reintentando..."
+                            }
+                            if (-not \$ok) { Start-Sleep -Seconds 10 }
                         }
-                    }
+                        if (-not \$ok) { exit 1 } else { exit 0 }
+                    """
 
-                    if (!healthCheckPassed) {
-                        error '❌ Health check falló después de múltiples intentos'
-                    }
+                    bat """
+                        powershell -NoLogo -NoProfile -Command "${psCmd.replace('"','\\"')}"
+                    """
+                }
 
-                    // Mostrar logs del contenedor (últimas 20 líneas)
-                    echo '📋 Últimos logs del contenedor:'
-                    bat "docker logs --tail 20 ${APP_NAME}"
+                // Mostrar últimos logs
+                script {
+                    echo 'Últimos logs del contenedor:'
+                    bat "docker logs --tail 20 ${APP_NAME} || echo No se pudieron obtener logs"
                 }
             }
         }
     }
 
     // ============================================
-    // POST-ACTIONS (Después de todas las stages)
+    // POST ACTIONS
     // ============================================
     post {
         success {
             script {
-                echo '================================================'
+                echo '==============================================='
                 echo '✅ PIPELINE COMPLETADO EXITOSAMENTE'
-                echo '================================================'
-                echo "🌐 Aplicación disponible en: http://localhost:${APP_PORT}/ContactoProfesionalesWeb/"
-                echo "🐳 Contenedor: ${APP_NAME}"
-                echo "🏷️  Imagen: ${DOCKER_IMAGE}:${DOCKER_TAG}"
-                echo '================================================'
+                echo "Aplicación: http://localhost:${APP_PORT}/ContactoProfesionalesWeb/"
+                echo "Contenedor: ${APP_NAME}"
+                echo "Imagen    : ${DOCKER_IMAGE}:${DOCKER_TAG}"
+                echo '==============================================='
 
-                // Limpiar imágenes antiguas (mantener últimas 3)
+                // Limpieza básica de imágenes antiguas (no crítica)
                 bat """
-                    echo '🧹 Limpiando imágenes antiguas...'
-                    docker images ${DOCKER_IMAGE} --format "{{.Tag}}" | \
-                        grep -v latest | \
-                        sort -rn | \
-                        tail -n +4 | \
-                        xargs -I {} docker rmi ${DOCKER_IMAGE}:{} 2>/dev/null || true
+                    echo Limpiando imágenes antiguas de ${DOCKER_IMAGE}...
+                    for /f "skip=3 tokens=1" %%i in ('docker images ${DOCKER_IMAGE} --format "{{.Tag}}" ^| findstr /R "^[0-9][0-9]*$" ^| sort /R') do (
+                        echo Eliminando tag antiguo: %%i
+                        docker rmi ${DOCKER_IMAGE}:%%i 2>NUL
+                    )
+                    exit /B 0
                 """
             }
-
-            // Enviar notificación de éxito (opcional)
-            // emailext (
-            //     subject: "✅ Build Success: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-            //     body: "Pipeline completado exitosamente.\n\nVer detalles: ${env.BUILD_URL}",
-            //     to: "team@example.com"
-            // )
         }
 
         failure {
             script {
-                echo '================================================'
+                echo '==============================================='
                 echo '❌ PIPELINE FALLÓ'
-                echo '================================================'
+                echo '==============================================='
 
-                // Mostrar logs del contenedor si existe
+                // Intentar mostrar logs del contenedor sin romper el post
                 bat """
-                    if docker ps -a | grep -q ${APP_NAME}; then
-                        echo '📋 Logs del contenedor:'
-                        docker logs --tail 50 ${APP_NAME}
-                    fi
+                    docker ps -a --format "{{.Names}}" | findstr /I "${APP_NAME}" >NUL
+                    if %ERRORLEVEL%==0 (
+                        echo Mostrando últimos logs del contenedor...
+                        docker logs --tail 50 ${APP_NAME} || echo No se pudieron obtener logs
+                    ) else (
+                        echo No existe contenedor ${APP_NAME}
+                    )
+                    exit /B 0
                 """
             }
-
-            // Enviar notificación de fallo (opcional)
-            // emailext (
-            //     subject: "❌ Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
-            //     body: "Pipeline falló.\n\nVer detalles: ${env.BUILD_URL}",
-            //     to: "team@example.com"
-            // )
         }
 
         always {
-            // Limpiar workspace si es necesario (opcional)
-            // cleanWs()
-
             script {
-                echo '================================================'
-                echo "⏱️  Duración total: ${currentBuild.durationString}"
-                echo '================================================'
+                echo '==============================================='
+                echo "Duración total: ${currentBuild.durationString}"
+                echo '==============================================='
             }
+            // Si quieres limpiar workspace:
+            // cleanWs()
         }
     }
 }
